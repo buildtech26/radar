@@ -224,13 +224,18 @@ def scegli(utente, profilo, lingua, fatti, temi, gia, oggi, inizio_ms):
     return [(tid, prima, altre, ids) for _, _, tid, prima, altre, ids in proposte[:max(restano, 0)]]
 
 
+NOMI_SEZIONI = {"finanza": ("Finanza", "Finance"), "economia": ("Economia", "Economy"), "ai": ("AI", "AI"),
+                "tech": ("Tech", "Tech"), "scienza": ("Scienza", "Science")}   # come SEZIONI in app.js
+
+
 def messaggio(tema, n, altre, lingua):
-    fonte = n["fonte"]
-    if altre:
-        fonte += f" · and {altre} more" if lingua == "en" else f" · e altre {altre}"
+    """Sezione · tema, e sotto solo la notizia (deciso da Mattia il 07/11/2026: niente testata).
+    Il "from Radar" sotto lo aggiunge iOS da solo e non si può togliere. `altre` resta per il registro."""
+    sezione = NOMI_SEZIONI.get(tema["gruppo"], ("", ""))[1 if lingua == "en" else 0]
+    nome = nome_tema(tema, lingua)
     return {
-        "titolo": nome_tema(tema, lingua),
-        "testo": f"{titolo_per(n, lingua)}\n{fonte}",
+        "titolo": f"{sezione} · {nome}" if sezione and sezione != nome else nome,
+        "testo": titolo_per(n, lingua),
         "url": RADAR + "#notizia=" + urllib.parse.quote(n["id"]),
         "tag": f"radar-{tema['id']}-{n['id']}",
         "lingua": lingua,
