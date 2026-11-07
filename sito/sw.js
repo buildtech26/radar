@@ -1,5 +1,5 @@
 // Radar · funziona anche senza rete (in metro, in aula): la pagina dalla cache, le notizie dall'ultima volta.
-const VERSIONE = "radar-v31";
+const VERSIONE = "radar-v32";
 const GUSCIO = ["./", "index.html", "privacy.html", "privacy-en.html", "stile.css", "app.js", "lingua.js", "conto.js", "config.js", "icona.svg", "manifest.webmanifest", "icona-180.png", "icona-192.png"];
 
 // cache: "reload" = i file freschi dal sito, non la copia che il browser tiene fino a 10 minuti (GitHub Pages):

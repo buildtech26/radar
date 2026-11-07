@@ -584,6 +584,8 @@ a.bottone-primario { display: flex; align-items: center; justify-content: center
   transition: font-weight 0ms;
 }
 .segmenti button[aria-pressed="true"] { font-weight: 600; }
+.segmenti.a-misura { grid-auto-columns: auto; }   /* le colonne auto si allargano a riempire, in proporzione al nome */
+.segmenti.a-misura button { padding: 0.375rem 0.25rem; white-space: nowrap; }
 .segmenti.piccoli { display: inline-grid; margin: 0; }
 .segmenti.piccoli button { padding: 0.25rem 0.625rem; font-size: 0.75rem; }
 

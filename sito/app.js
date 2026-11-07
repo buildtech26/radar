@@ -171,7 +171,7 @@ const S = {
   dati: null,
   caricato: 0,
   vista: "per-te",
-  sezione: mem.get("sezione", "finanza"),
+  sezione: mem.get("sezione", "tutto"),
   periodo: mem.get("periodo", 90),
   filtroAgenda: "tutti",
   cerca: "",
@@ -1163,7 +1163,7 @@ function vistaNotizie() {
   const riempi = () => {
     const q = S.cerca.trim().toLowerCase();
     let voci = visibili();
-    voci = q ? voci.filter((n) => conAltre(n).some((x) => (x.titolo + " " + x.sommario + " " + x.fonte).toLowerCase().includes(q))) : voci.filter((n) => n.sezione === S.sezione);
+    voci = q ? voci.filter((n) => conAltre(n).some((x) => (x.titolo + " " + x.sommario + " " + x.fonte).toLowerCase().includes(q))) : S.sezione === "tutto" ? voci : voci.filter((n) => n.sezione === S.sezione);
     voci.sort((a, b) => (b.data || 0) - (a.data || 0));
     if (!voci.length) { lista.replaceChildren(h("div", { class: "vuoto" }, icona("lente"), h("strong", {}, q ? L("Nessun risultato", "No results") : L("Niente qui", "Nothing here")), q ? L(`Niente su «${S.cerca.trim()}» negli ultimi giorni.`, `Nothing about “${S.cerca.trim()}” in the last few days.`) : "")); return; }
     const gruppi = [];
@@ -1176,10 +1176,13 @@ function vistaNotizie() {
     lista.replaceChildren(...gruppi, h("p", { class: "fine-lista" }, L(`${voci.length} notizie degli ultimi 7 giorni`, `${voci.length} stories from the last 7 days`)));
   };
   input.addEventListener("input", () => { S.cerca = input.value; seg.style.opacity = S.cerca.trim() ? 0.4 : 1; riempi(); });
+  // "Tutto" in testa: tutte le sezioni scelte, mischiate per ora (con una sezione sola non serve)
   const mie = Object.entries(SEZIONI()).filter(([k]) => sezioniScelte().has(k));
+  if (mie.length > 1) mie.unshift(["tutto", L("Tutto", "All")]);
   if (!mie.some(([k]) => k === S.sezione)) S.sezione = mie[0][0];
-  const seg = segmenti(mie, S.sezione, (v) => { S.sezione = v; mem.set("sezione", v); S.cerca = ""; input.value = ""; seg.style.opacity = 1; riempi(); window.scrollTo({ top: 0 }); }, { etichetta: L("Sezione", "Section") });
+  const seg = segmenti(mie, S.sezione,(v) => { S.sezione = v; mem.set("sezione", v); S.cerca = ""; input.value = ""; seg.style.opacity = 1; riempi(); window.scrollTo({ top: 0 }); }, { etichetta: L("Sezione", "Section") });
   seg.style.transition = "opacity 160ms";
+  seg.classList.add("a-misura");   // fino a 6 voci: larghe quanto il nome, così «Economia» ci sta anche sul telefono
   if (S.cerca.trim()) seg.style.opacity = 0.4;
   if (mie.length < 2) seg.hidden = true;   // una sezione sola: niente da scegliere
   riempi();
