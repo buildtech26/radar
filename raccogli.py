@@ -716,11 +716,11 @@ def leggi_json(nome):
     return json.loads((QUI / nome).read_text(encoding="utf-8"))
 
 
-def per_widget(dati, per_sezione=15, punti=24):
+def per_widget(dati, per_sezione=15):
     """widget.json: il riassunto leggero per il widget di iPhone e iPad (Scriptable, sito/widget/radar.js).
     Il widget si aggiorna ogni mezz'ora anche coi dati del telefono: qualche decina di KB invece del MB di
-    dati.json. Una notizia per fatto (italiana se c'è, come nell'app), le più recenti di ogni sezione, e i
-    mercati con l'andamento di oggi ridotto a pochi punti per la linea."""
+    dati.json. Una notizia per fatto (italiana se c'è, come nell'app), le più recenti di ogni sezione.
+    Solo notizie: i mercati nel widget Mattia non li vuole (07/11/2026)."""
     gruppi = {}
     for v in dati["notizie"]:
         if v["data"]:
@@ -739,17 +739,7 @@ def per_widget(dati, per_sezione=15, punti=24):
         notizie.append({k: v[k] for k in ("id", "titolo", "fonte", "data", "link", "sezione", "paese", "lingua")}
                        | ({"titolo_it": tr["titolo"]} if tr.get("lingua") == "it" and tr.get("titolo") else {})
                        | ({"testate": testate} if testate > 1 else {}))
-    mercati = []
-    for m in dati["mercati"]:
-        oggi = m.get("oggi") or {}
-        p = oggi.get("punti") or []
-        corti = p[::-(-len(p) // punti)] if p else []
-        if p and corti[-1] != p[-1]:
-            corti.append(p[-1])
-        mercati.append({k: m[k] for k in ("simbolo", "nome", "breve", "categoria", "valuta", "prezzo", "var_giorno", "en") if k in m}
-                       | ({"predefinito": True} if m.get("predefinito") else {})
-                       | ({"punti": corti, "riferimento": oggi.get("riferimento")} if corti else {}))
-    return {"aggiornato": dati["aggiornato"], "notizie": notizie, "mercati": mercati}
+    return {"aggiornato": dati["aggiornato"], "notizie": notizie}
 
 
 def raccogli():
