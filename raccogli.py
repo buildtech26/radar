@@ -725,20 +725,25 @@ def per_widget(dati, per_sezione=15):
     for v in dati["notizie"]:
         if v["data"]:
             gruppi.setdefault(v.get("gruppo") or v["id"], []).append(v)
+    loghi = {f["nome"]: f["logo"] for f in dati["fonti"] if f.get("logo")}
     scelte = []
     for g in gruppi.values():
         v = next((x for x in g if x["lingua"] == "it"), None) or max(g, key=lambda x: x["data"])
-        scelte.append((v, len(g)))
+        # la foto: quella della notizia scelta, o di un'altra testata dello stesso fatto
+        foto = v.get("immagine") or next((x["immagine"] for x in g if x.get("immagine")), None)
+        scelte.append((v, len(g), foto))
     scelte.sort(key=lambda c: -c[0]["data"])
     notizie, contate = [], {}
-    for v, testate in scelte:
+    for v, testate, foto in scelte:
         if contate.get(v["sezione"], 0) >= per_sezione:
             continue
         contate[v["sezione"]] = contate.get(v["sezione"], 0) + 1
         tr = v.get("traduzione") or {}
         notizie.append({k: v[k] for k in ("id", "titolo", "fonte", "data", "link", "sezione", "paese", "lingua")}
                        | ({"titolo_it": tr["titolo"]} if tr.get("lingua") == "it" and tr.get("titolo") else {})
-                       | ({"testate": testate} if testate > 1 else {}))
+                       | ({"testate": testate} if testate > 1 else {})
+                       | ({"immagine": foto} if foto else {})
+                       | ({"logo": loghi[v["fonte"]]} if v["fonte"] in loghi else {}))
     return {"aggiornato": dati["aggiornato"], "notizie": notizie}
 
 
