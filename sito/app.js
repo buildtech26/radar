@@ -2,6 +2,7 @@
 // I testi delle notizie arrivano da siti esterni: vanno sempre nel DOM come testo (textContent), mai come HTML.
 
 import * as conto from "./conto.js";
+import { NOTIFICHE } from "./config.js";
 import { L, LOCALE, lingua, impostaLingua, loc } from "./lingua.js";
 
 // ---------------------------------------------------------------- utilità
@@ -134,7 +135,8 @@ function velocitaDa(storia, adesso) {
 //          che non c'è (nata dopo) vale accesa. Le spente spariscono da Notizie e Per te, e i loro temi non contano.
 //   interfaccia: "it" | "en", la lingua dell'app; null = la decide il browser (vedi lingua.js)
 function nuovoProfilo() {
-  return { versione: 1, nome: "", temi: null, mercati: null, mio: null, paesi: null, sezioni: null, interfaccia: null, fatto: false };
+  // notifiche: un tema per sezione, { finanza: "etf", ai: "anthropic" } (vedi pannelloNotifiche)
+  return { versione: 1, nome: "", temi: null, mercati: null, mio: null, paesi: null, sezioni: null, interfaccia: null, notifiche: null, fatto: false };
 }
 // I profili di prima avevano "lingue" ({ it, en }) al posto dei paesi: chi aveva già fatto le sue scelte tiene
 // tutto quello che vedeva (l'inglese acceso = Europa, Stati Uniti e Regno Unito).
@@ -1491,6 +1493,7 @@ function foglioProfilo(parte) {
 
   const pannelli = {
     temi: h("div", {}, temi),
+    notifiche: pannelloNotifiche(() => scelta.querySelectorAll("button")[3]?.click()),   // [3] = "Tu"
     mercati: h("div", {},
       h("p", { class: "nota stretta" }, L("Accendi quelli da seguire. La stella ne mette uno in evidenza, primo e incorniciato: per esempio l'ETF del tuo piano di accumulo.", "Turn on the ones to follow. The star highlights one, first and framed: for example the ETF in your savings plan.")),
       mercati),
@@ -1513,18 +1516,161 @@ function foglioProfilo(parte) {
   const area = h("div", {});
   const mostraParte = (k) => { area.replaceChildren(pannelli[k]); $("#foglio-contenuto").scrollTop = 0; };
   const iniziale = pannelli[parte] ? parte : "temi";
-  const scelta = segmenti([["temi", L("Temi", "Topics")], ["mercati", L("Mercati", "Markets")], ["tu", L("Tu", "You")]], iniziale, mostraParte, { etichetta: L("Parte", "Section") });
+  const scelta = segmenti([["temi", L("Temi", "Topics")], ["mercati", L("Mercati", "Markets")], ["notifiche", L("Notifiche", "Alerts")], ["tu", L("Tu", "You")]], iniziale, mostraParte, { etichetta: L("Parte", "Section") });
   mostraParte(iniziale);
   apriFoglio(L("Il tuo Radar", "Your Radar"), h("div", {}, h("div", { class: "segmenti-fissi" }, scelta), area), () => { if (cambiato) disegna(); });
 }
 
+// ---------------------------------------------------------------- notifiche
+// Un tema per sezione (S.profilo.notifiche = { finanza: "etf", ai: "anthropic" }): viaggia col profilo, quindi vale
+// su tutti i dispositivi dell'account. Quali dispositivi le ricevono lo decidono le iscrizioni (supabase/notifiche.sql).
+// Le manda il giro orario su GitHub (notifica.py): solo con l'account, al massimo 2 al giorno per tema e 5 in tutto,
+// dalle 8 alle 22. Su iPhone e iPad solo all'app aggiunta alla schermata Home (iOS 16.4 o più recente).
+
+const PUSH = {
+  supportate: "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && location.protocol === "https:",
+  ios: /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1),
+  dallaHome: matchMedia("(display-mode: standalone)").matches || navigator.standalone === true,
+};
+function chiaveVapid() {
+  const b = atob(NOTIFICHE.chiave.replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(b, (c) => c.charCodeAt(0));
+}
+// un'iscrizione fatta con una chiave vecchia non riceverebbe più niente: va rifatta
+function stessaChiave(sub) {
+  const k = sub.options && sub.options.applicationServerKey;
+  if (!k) return true;
+  const a = new Uint8Array(k), b = chiaveVapid();
+  return a.length === b.length && a.every((x, i) => x === b[i]);
+}
+async function iscrizioneQui() {
+  if (!PUSH.supportate) return null;
+  // ready aspetta per sempre se la cache dell'app non si è installata: meglio un "non so" dopo qualche secondo
+  const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((ok) => setTimeout(() => ok(null), 4000))]);
+  return reg ? reg.pushManager.getSubscription() : null;
+}
+// il permesso si chiede qui, subito dopo il tocco sull'interruttore: iOS lo vuole così
+async function attivaNotifiche() {
+  const permesso = await Notification.requestPermission();
+  if (permesso !== "granted") {
+    throw new Error(permesso === "denied"
+      ? L("Le notifiche sono bloccate per il Radar: si riattivano dalle impostazioni del dispositivo.", "Notifications are blocked for Radar: turn them back on in your device settings.")
+      : L("Notifiche non attivate.", "Notifications not turned on."));
+  }
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (sub && !stessaChiave(sub)) { await sub.unsubscribe(); sub = null; }
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chiaveVapid() });
+  await conto.iscrivi(sub.toJSON(), lingua());
+  mem.set("notifiche", { attive: true, rinnovate: Date.now() });
+}
+// anche senza rete il dispositivo smette subito: la riga sul server la toglie notifica.py al primo invio rifiutato
+async function spegniNotifiche() {
+  mem.set("notifiche", { attive: false, rinnovate: 0 });
+  const sub = await iscrizioneQui().catch(() => null);
+  if (!sub) return;
+  try { await conto.disiscrivi(sub.endpoint); } catch { /* ci pensa notifica.py */ }
+  try { await sub.unsubscribe(); } catch { /* già tolta */ }
+}
+// una volta al giorno, all'apertura: l'iscrizione si riscrive (il browser può cambiarla, la lingua pure)
+async function rinfrescaNotifiche() {
+  const stato = mem.get("notifiche", null);
+  if (!stato?.attive || !PUSH.supportate || !conto.utente() || Notification.permission !== "granted") return;
+  if (Date.now() - (stato.rinnovate || 0) < 864e5) return;
+  try { await attivaNotifiche(); } catch { /* si riprova alla prossima apertura */ }
+}
+
+function pannelloNotifiche(vaiATu) {
+  const stato = h("div", {});
+  const disegnaStato = async () => {
+    if (!conto.utente()) {
+      const b = h("button", { type: "button", class: "riga-link premibile" }, L("Entra o crea l'account", "Sign in or create an account"), icona("freccia", "freccia"));
+      b.addEventListener("click", vaiATu);
+      stato.replaceChildren(h("p", { class: "nota stretta" }, L("Le notifiche hanno bisogno dell'account: così i temi scelti valgono su tutti i tuoi dispositivi.", "Alerts need an account, so the topics you pick work on all your devices.")), h("div", { class: "gruppo" }, b));
+      return;
+    }
+    if (PUSH.ios && !PUSH.dallaHome) {
+      stato.replaceChildren(h("p", { class: "nota stretta" }, L("Su iPhone e iPad le notifiche arrivano solo al Radar aggiunto alla schermata Home: in Safari tocca Condividi → Aggiungi alla schermata Home, poi apri il Radar da lì. Serve iOS 16.4 o più recente.", "On iPhone and iPad, alerts only reach Radar added to the Home Screen: in Safari tap Share → Add to Home Screen, then open Radar from there. iOS 16.4 or later is needed.")));
+      return;
+    }
+    if (!PUSH.supportate) {
+      stato.replaceChildren(h("p", { class: "nota stretta" }, L("Questo browser non riceve notifiche dai siti.", "This browser can't receive alerts from websites.")));
+      return;
+    }
+    const bloccate = Notification.permission === "denied";
+    const sub = await iscrizioneQui().catch(() => null);
+    const accese = !bloccate && !!sub && !!mem.get("notifiche", null)?.attive;
+    const sw = interruttore(L("Notifiche su questo dispositivo", "Alerts on this device"), accese, async (on) => {
+      const input = sw.querySelector("input");
+      input.disabled = true;
+      try {
+        if (on) {
+          await attivaNotifiche();
+          mostraAvviso(scelteNotifiche().length ? L("Notifiche attive su questo dispositivo", "Alerts on for this device") : L("Notifiche attive: ora scegli i temi qui sotto", "Alerts on: now pick the topics below"));
+        } else {
+          await spegniNotifiche();
+          mostraAvviso(L("Niente più notifiche su questo dispositivo", "No more alerts on this device"));
+        }
+      } catch (e) {
+        input.checked = !on;
+        mostraAvviso(e.message || L("Non sono riuscito ad attivarle. Riprova tra poco.", "Couldn't turn them on. Please try again shortly."));
+      } finally {
+        input.disabled = false;
+        disegnaStato();
+      }
+    });
+    if (bloccate) sw.querySelector("input").disabled = true;
+    stato.replaceChildren(
+      h("div", { class: "gruppo" }, h("div", { class: "riga-tema" }, h("div", { class: "info" }, h("div", { class: "nome" }, L("Su questo dispositivo", "On this device"))), sw)),
+      bloccate ? h("p", { class: "nota stretta" }, L("Le hai bloccate per il Radar: si riattivano dalle impostazioni del browser (su iPhone: Impostazioni → Notifiche → Radar).", "You've blocked them for Radar: turn them back on in your browser settings (on iPhone: Settings → Notifications → Radar).")) : null);
+  };
+  disegnaStato();
+
+  // un tema per sezione, tra quelli della sezione (anche se non lo segui in Per te)
+  const sezioni = sezioniScelte();
+  const righe = Object.entries(GRUPPI_TEMI()).filter(([g]) => sezioni.has(g)).map(([g, nome]) => {
+    const sel = h("select", { class: "scelta-notifica", "aria-label": L(`Notifiche di ${nome}`, `${nome} alerts`) },
+      h("option", { value: "" }, L("Nessuno", "None")),
+      S.dati.temi.filter((t) => t.gruppo === g).map(loc).map((t) => h("option", { value: t.id }, t.nome)));
+    sel.value = (S.profilo.notifiche || {})[g] || "";
+    sel.addEventListener("change", () => {
+      const n = { ...(S.profilo.notifiche || {}) };
+      if (sel.value) n[g] = sel.value; else delete n[g];
+      S.profilo.notifiche = Object.keys(n).length ? n : null;
+      salvaProfilo();
+    });
+    return h("div", { class: "riga-tema" }, h("div", { class: "info" }, h("div", { class: "nome" }, nome)), h("span", { class: "scelta-notifica-box" }, sel));
+  });
+
+  return h("div", {},
+    stato,
+    h("div", { class: "gruppo-titolo" }, L("Un tema per sezione", "One topic per section")),
+    h("div", { class: "gruppo" }, righe),
+    h("p", { class: "nota stretta" }, L("Ti avvisiamo quando esce una notizia con quel tema nel titolo. Al massimo 2 notifiche al giorno per tema e 5 in tutto, solo dalle 8 alle 22: quelle della notte arrivano alle 8. Se nella stessa ora escono più notizie sullo stesso tema, arrivano in una notifica sola.", "We'll alert you when a story has that topic in its headline. At most 2 alerts a day per topic and 5 in total, only from 8 am to 10 pm (Italian time): overnight ones arrive at 8. If several stories on the same topic come out in the same hour, they arrive as one alert.")),
+    h("p", { class: "nota stretta" }, L("Il Radar guarda le notizie nuove una volta all'ora, quindi una notifica può arrivare fino a un'ora dopo. I temi valgono per tutti i tuoi dispositivi, l'interruttore solo per questo.", "Radar checks for new stories once an hour, so an alert can arrive up to an hour later. Topics apply to all your devices, the switch only to this one.")));
+}
+const scelteNotifiche = () => Object.values(S.profilo.notifiche || {}).filter(Boolean);
+
+// dalla notifica: #notizia=<id>. Si apre la sottopagina sopra la vista di prima; se la notizia non c'è più, si dice
+function apriDaNotifica(id) {
+  const n = visibili().find((x) => conAltre(x).some((y) => y.id === id)) || S.dati.notizie.find((x) => x.id === id) || S.salvate.find((x) => x.id === id);
+  if (!n) { mostraAvviso(L("Questa notizia non è più nel Radar", "This story is no longer in Radar")); return; }
+  apriNotizia(n, document.querySelector(`.card[data-id="${CSS.escape(n.id)}"]`));
+}
+navigator.serviceWorker?.addEventListener("message", (e) => {
+  if (e.data?.radar !== "apri" || !e.data.url) return;
+  const u = new URL(e.data.url);
+  if (u.hash) location.hash = u.hash;
+});
+
 function foglioInfo() {
-  const fonti = Object.entries(SEZIONI()).map(([s, nome]) =>
+  const fonti =Object.entries(SEZIONI()).map(([s, nome]) =>
     h("li", {}, h("strong", {}, `${nome}: `), S.dati.fonti.filter((f) => f.sezione === s).map((f) => f.nome).join(", ")));
   const ETICHETTA = L("Cancella i miei dati da questo dispositivo", "Delete my data from this device");
   let conferma = 0;
   const cancella = h("button", { type: "button", class: "bottone-pericolo premibile" }, ETICHETTA);
   cancella.addEventListener("click", async () => {
+    if (conferma) await spegniNotifiche();
     if (conferma && conto.utente()) await conto.esci();
     if (!conferma) {
       cancella.textContent = conto.utente() ? L("Tocca di nuovo: cancella tutto qui ed esci (l'account resta)", "Tap again: delete everything here and sign out (the account stays)") : L("Tocca di nuovo: cancella nome, scelte e salvate", "Tap again: delete name, choices and saved stories");
@@ -1550,7 +1696,7 @@ function foglioInfo() {
     h("p", {}, "Le date dell'agenda vengono dalle pagine ufficiali di BCE, Fed, Eurostat e delle aziende."),
     h("h3", {}, "Privacy"),
     h("p", {}, "Non ci sono pubblicità né cookie di profilazione, e l'app non registra statistiche su cosa leggi. Senza account, nome, temi, mercati e salvate restano solo in questo browser."),
-    h("p", {}, "L'account è facoltativo. Se lo crei conserviamo la tua email e le tue scelte (nome, temi, mercati, salvate, lette e nascoste) su Supabase, in un server in Germania, solo per fartele ritrovare sugli altri dispositivi. Puoi scaricarle o eliminare l'account in ogni momento da Il tuo Radar → Tu."),
+    h("p", {}, "L'account è facoltativo. Se lo crei conserviamo la tua email e le tue scelte (nome, temi, mercati, salvate, lette e nascoste; se accendi le notifiche, anche l'indirizzo del dispositivo per riceverle e quelle già inviate) su Supabase, in un server in Germania, solo per fartele ritrovare sugli altri dispositivi. Puoi scaricarle o eliminare l'account in ogni momento da Il tuo Radar → Tu."),
     h("p", {}, "Il sito, come ogni sito, riceve dal tuo browser dati tecnici come l'indirizzo IP; le immagini delle notizie arrivano direttamente dai siti delle testate."),
     h("p", {}, "Tutti i dettagli (chi è il titolare, i fornitori, per quanto teniamo i dati, i tuoi diritti) sono nell'", informativa, "."),
   ] : [
@@ -1565,7 +1711,7 @@ function foglioInfo() {
     h("p", {}, "Calendar dates come from the official pages of the ECB, the Fed, Eurostat and the companies."),
     h("h3", {}, "Privacy"),
     h("p", {}, "There are no ads and no profiling cookies, and the app keeps no statistics on what you read. Without an account, your name, topics, markets and saved stories stay in this browser only."),
-    h("p", {}, "The account is optional. If you create one, we store your email and your choices (name, topics, markets, saved, read and hidden stories) on Supabase, on a server in Germany, only so you can find them on your other devices. You can download them or delete the account at any time from Your Radar → You."),
+    h("p", {}, "The account is optional. If you create one, we store your email and your choices (name, topics, markets, saved, read and hidden stories; if you turn alerts on, also your device's address for receiving them and the alerts already sent) on Supabase, on a server in Germany, only so you can find them on your other devices. You can download them or delete the account at any time from Your Radar → You."),
     h("p", {}, "Like any website, the site receives technical data from your browser, such as your IP address; news images load directly from the outlets' sites."),
     h("p", {}, "All the details (who the data controller is, the providers, how long we keep data, your rights) are in the ", informativa, "."),
   ]), cancella));
@@ -2010,7 +2156,8 @@ function pannelloConto() {
     elimina.disabled = true;
     elimina.textContent = L("Elimino…", "Deleting…");
     try {
-      await conto.eliminaAccount();
+      await conto.eliminaAccount();   // le iscrizioni sul server spariscono con l'account
+      spegniNotifiche();
       mem.set("collegato", null);
       mostraAvviso(L("Account eliminato. Su questo dispositivo le scelte restano.", "Account deleted. Your choices stay on this device."));
     } catch (e) {
@@ -2025,6 +2172,7 @@ function pannelloConto() {
       riga(L("Sincronizza adesso", "Sync now"), () => { const p = sincronizza(); aggiornaStatoSync(); p.then(() => mostraAvviso(SYNC.errore ? SYNC.errore : L("Tutto sincronizzato", "All synced"))); }),
       riga(L("Scarica i miei dati", "Download my data"), scaricaDati),
       riga(L("Esci", "Sign out"), async () => {
+        await spegniNotifiche();   // un dispositivo senza account non riceve le notifiche di quell'account
         await conto.esci();
         mem.set("collegato", null);
         mostraAvviso(L("Sei uscito. Le scelte restano su questo dispositivo.", "Signed out. Your choices stay on this device."));
@@ -2116,12 +2264,16 @@ function disegna({ nuova = false } = {}) {
 }
 
 function vai() {
+  // arrivo da una notifica: l'indirizzo torna quello della vista, e sopra si apre la notizia
+  const daNotifica = /^notizia=(.+)$/.exec(location.hash.slice(1));
+  if (daNotifica) history.replaceState(null, "", `${location.pathname}${location.search}#${S.vista}`);
   const nome = location.hash.slice(1);
   const vista = VISTE[nome] ? nome : "per-te";
   const nuova = vista !== S.vista || !$("#vista").childElementCount;
   S.vista = vista;
   document.querySelectorAll(".tab").forEach((t) => (t.dataset.vista === vista ? t.setAttribute("aria-current", "page") : t.removeAttribute("aria-current")));
   disegna({ nuova });
+  if (daNotifica && S.dati && S.profilo.fatto) apriDaNotifica(decodeURIComponent(daNotifica[1]));
 }
 addEventListener("hashchange", vai);
 
@@ -2196,6 +2348,7 @@ async function carica({ manuale = false } = {}) {
     compilaTemi();
     compilaGlossario();
     vai();
+    rinfrescaNotifiche();
     if (!S.profilo.fatto) benvenuto();
     if (conto.utente() && Date.now() - SYNC.ultima > 60e3) sincronizza();
     if (manuale) mostraAvviso(nuove ? L(nuove === 1 ? "1 notizia nuova" : `${nuove} notizie nuove`, nuove === 1 ? "1 new story" : `${nuove} new stories`) : L("Già tutto aggiornato", "Already up to date"));

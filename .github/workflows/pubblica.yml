@@ -47,6 +47,16 @@ jobs:
           path: sito
       - id: deploy
         uses: actions/deploy-pages@v4
+      # dopo la pubblicazione, così toccando la notifica la notizia c'è già. Se qualcosa va storto qui, la pagina
+      # è comunque pubblicata. Il registro su Supabase evita di rimandare la stessa notizia (anche ai giri dei push).
+      - name: Manda le notifiche
+        continue-on-error: true
+        run: |
+          pip install --quiet pywebpush==2.5.0
+          python notifica.py
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
 
   # GitHub spegne le pianificazioni dei repo pubblici fermi da 60 giorni: un commit vuoto al mese lo evita.
   attivo:

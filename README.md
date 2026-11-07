@@ -101,8 +101,38 @@ nella tabella `profili` (`supabase/schema.sql`) e può leggere e scrivere solo l
 modifica più recente (`tempi`); al primo accesso su un dispositivo le salvate si uniscono. Il testo della mail
 del codice è in `supabase/mail-codice.html`. La chiave **secret** di Supabase non va mai nel sito.
 
+## Notifiche
+
+Solo con l'account (scelto da Mattia il 07/11/2026). In Il tuo Radar → Notifiche: un interruttore per questo
+dispositivo e, per ogni sezione accesa, al massimo un tema (`profilo.notifiche = {sezione: tema}`, viaggia col
+profilo). Su iPhone e iPad arrivano solo all'app aggiunta alla Home (iOS 16.4+).
+
+- `sito/app.js` (`pannelloNotifiche`, `attivaNotifiche`): chiede il permesso al tocco, iscrive il dispositivo con
+  la chiave pubblica VAPID di `sito/config.js` e lo manda a Supabase con `iscrivi()`. Uscendo dall'account o
+  spegnendo, `disiscrivi()`. L'indirizzo `#notizia=<id>` apre la notizia sopra la vista (`apriDaNotifica`).
+- `sito/sw.js`: mostra la notifica (`push`) e al tocco porta il Radar in primo piano su quella notizia.
+- `supabase/notifiche.sql`: tabelle `iscrizioni` (un dispositivo) e `notifiche_inviate` (registro di 3 giorni),
+  che il browser non vede; solo le funzioni `iscrivi`/`disiscrivi`. Da incollare una volta nel SQL Editor.
+- `notifica.py`: gira su GitHub dopo la pubblicazione. Tema nel titolo (anche tradotto), sezioni e paesi della
+  persona, un fatto una volta sola, più notizie dello stesso tema nello stesso giro = una notifica, al massimo
+  2 al giorno per tema e 5 in tutto, solo dalle 8 alle 22 (la notte arriva alle 8). Le iscrizioni che il
+  servizio push dà per scadute (404/410) si cancellano. Nei log solo conteggi: il repo è pubblico.
+  Prova senza mandare niente: `python notifica.py --prova finto.json [--ora "AAAA-MM-GG HH:MM"]` (formato in testa
+  al file; serve `pip install pywebpush` solo per mandare davvero).
+- Secrets di GitHub: `VAPID_PRIVATE_KEY` (la privata delle notifiche: se si perde se ne fa una coppia nuova, si
+  mette la pubblica in `config.js` e i dispositivi si riscrivono da soli alla prima apertura) e
+  `SUPABASE_SERVICE_KEY` (la chiave secret di Supabase: solo lì, mai nel sito).
+
 Informativa privacy e condizioni d'uso: `sito/privacy.html` (titolare Mattia Piperissa). Se cambiano dati raccolti
 o fornitori, va aggiornata insieme alla data in cima e al riassunto in Info (`foglioInfo` in `app.js`).
+
+## Notifiche, da fare a mano una volta
+
+1. Supabase → SQL Editor → New query: incolla `supabase/notifiche.sql` → Run.
+2. Supabase → Project Settings → API Keys: copia la chiave **secret** (`sb_secret_…`) e in GitHub → Settings →
+   Secrets and variables → Actions crea il secret `SUPABASE_SERVICE_KEY` con quella.
+3. `VAPID_PRIVATE_KEY` c'è già (messo il 07/11/2026). Senza uno dei due, il passo "Manda le notifiche" scrive che
+   mancano e non manda niente: la pubblicazione va avanti uguale.
 
 ## Pubblicazione
 

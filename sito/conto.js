@@ -343,6 +343,17 @@ export async function scriviDati(dati) {
   });
 }
 
+// notifiche: questo dispositivo (l'iscrizione che dà il browser) riceve, o non riceve più, quelle dell'utente.
+// Passano dalle funzioni del database (supabase/notifiche.sql): le tabelle il browser non le vede.
+export async function iscrivi(s, lingua) {
+  const k = s.keys || {};
+  await chiama("/rest/v1/rpc/iscrivi", { metodo: "POST", corpo: { p_endpoint: s.endpoint, p_p256dh: k.p256dh, p_auth: k.auth, p_lingua: lingua }, prefer: "return=minimal" });
+}
+export async function disiscrivi(endpoint) {
+  if (!utente()) return;
+  await chiama("/rest/v1/rpc/disiscrivi", { metodo: "POST", corpo: { p_endpoint: endpoint }, prefer: "return=minimal" });
+}
+
 export async function eliminaAccount() {
   await chiama("/rest/v1/rpc/elimina_account", { metodo: "POST", corpo: {} });
   imposta(null);

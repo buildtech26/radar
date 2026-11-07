@@ -44,7 +44,7 @@
 <main>
   <a class="torna" href="./">‹ Radar</a>
   <h1>Privacy and terms of use</h1>
-  <p class="data">Last updated: 5 November 2026 · <a href="privacy.html" lang="it" hreflang="it">Versione italiana</a></p>
+  <p class="data">Last updated: 7 November 2026 · <a href="privacy.html" lang="it" hreflang="it">Versione italiana</a></p>
 
   <section>
     <h2>In short</h2>
@@ -66,10 +66,11 @@
       <li><strong>Without an account.</strong> Your name (if you enter one), topics, markets, and saved, read and hidden stories are stored in your browser's memory (localStorage) and are not sent to us. You can delete them from About → “Delete my data from this device” or by clearing the site's data in your browser.</li>
       <li><strong>With an account.</strong> We store your email address, an account identifier, the dates the account was created and last signed in, and the same choices listed above. They serve one purpose only: letting you sign in and find your choices on all your devices.</li>
       <li><strong>Sign in with Google.</strong> If you sign in with Google, Google gives us your email address, name and profile picture. We only use the email; the name and picture stay recorded in the account data, and we don't display them or use them for anything else.</li>
+      <li><strong>Alerts (optional, account only).</strong> If you turn them on for a device, we store the address your browser creates to receive them, with its encryption keys and the app language, together with the topics you picked for alerts. To keep to the limits (at most 2 a day per topic and 5 in total) and not send you the same story twice, we also keep the list of alerts already sent, for 3 days. Turning the switch off or signing out deletes that device's address.</li>
       <li><strong>Sign-in emails.</strong> We use your email address to send you the sign-in code. We don't write to you for any other reason and we don't sign you up to newsletters.</li>
       <li><strong>Technical data.</strong> As with any website, the servers hosting the page and the accounts receive technical data such as your IP address and browser type, which end up in logs used to run and secure the service.</li>
     </ul>
-    <p>Stories are sorted by your topics <strong>in your browser</strong>: we build no profiles and make no automated decisions about you.</p>
+    <p>Stories are sorted by your topics <strong>in your browser</strong>. Only for alerts, if you turn them on, the topics you picked for alerts are also matched against the headlines of new stories on our server, once an hour. We build no profiles and make no automated decisions about you.</p>
 
     <h3>Legal basis</h3>
     <p>Account data is processed because it is needed to provide the service you asked for by creating the account (Art. 6(1)(b) GDPR). Technical data is processed for our legitimate interest in keeping the service running and protected from abuse (Art. 6(1)(f)).</p>
@@ -79,14 +80,15 @@
     <ul>
       <li><strong>Supabase</strong> (database and sign-in): account data is stored on a server in the European Union, in Frankfurt (Germany).</li>
       <li><strong>Brevo</strong> (France): sending the emails with the sign-in code.</li>
-      <li><strong>GitHub</strong> (United States): hosts the website and receives the technical data of visits.</li>
+      <li><strong>GitHub</strong> (United States): hosts the website and receives the technical data of visits. The program that picks and sends the alerts also runs on its servers, once an hour.</li>
+      <li><strong>Your browser's push service</strong>, only if you turn alerts on: Apple for iPhone, iPad and Safari, Google for Chrome and Android, Mozilla for Firefox, Microsoft for Edge. It delivers the alerts to your device; their content reaches it encrypted.</li>
       <li><strong>Google</strong>: only if you choose to sign in with Google.</li>
     </ul>
     <p>Some of these providers are based or offer support outside the European Union: in those cases the transfer takes place with the safeguards provided by the GDPR, such as the EU-US Data Privacy Framework or the European Commission's standard contractual clauses.</p>
     <p>News images load directly from the outlets' websites, and when you open a story you go to their site: their own privacy notices apply there.</p>
 
     <h3>How long</h3>
-    <p>Account data is kept until you delete the account. When you delete it, the account and your choices are removed from the database straight away; the providers' technical logs, which may contain your IP address or email, are deleted automatically on their own schedules, normally within a few days or weeks.</p>
+    <p>Account data is kept until you delete the account. The list of alerts sent deletes itself after 3 days; a device's alert address stays until you turn alerts off, sign out, or the browser reports it as expired. When you delete the account, the account, your choices and alerts are removed from the database straight away; the providers' technical logs, which may contain your IP address or email, are deleted automatically on their own schedules, normally within a few days or weeks.</p>
 
     <h3>Your rights</h3>
     <p>You can ask at any time to access, correct, delete or receive your data, to restrict its use or to object (Art. 15-22 GDPR). You can do much of this yourself in the app: “Download my data” gives you a file with everything we keep about your choices, “Delete account” removes everything. For anything else, write to the address above. If you think your data is being mishandled, you can lodge a complaint with the Italian data protection authority, the <a href="https://www.garanteprivacy.it/home_en" target="_blank" rel="noopener">Garante per la protezione dei dati personali</a>, or with the authority of the EU country where you live.</p>

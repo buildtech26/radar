@@ -1,5 +1,5 @@
 // Radar · funziona anche senza rete (in metro, in aula): la pagina dalla cache, le notizie dall'ultima volta.
-const VERSIONE = "radar-v29";
+const VERSIONE = "radar-v30";
 const GUSCIO = ["./", "index.html", "privacy.html", "privacy-en.html", "stile.css", "app.js", "lingua.js", "conto.js", "config.js", "icona.svg", "manifest.webmanifest", "icona-180.png", "icona-192.png"];
 
 self.addEventListener("install", (e) => {
@@ -34,4 +34,35 @@ self.addEventListener("fetch", (e) => {
       return inCache || rete;
     })
   );
+});
+
+// ---------------------------------------------------------------- notifiche
+// Le manda il giro orario su GitHub (notifica.py): { titolo, testo, url, tag }. iOS vuole che ogni push mostri
+// davvero una notifica, quindi anche un messaggio storto ne mostra una.
+self.addEventListener("push", (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = { testo: e.data ? e.data.text() : "" }; }
+  e.waitUntil(self.registration.showNotification(d.titolo || "Radar", {
+    body: d.testo || "",
+    icon: "icona-192.png",
+    tag: d.tag || undefined,
+    lang: d.lingua || undefined,
+    data: { url: d.url || "./" },
+  }));
+});
+
+// toccandola: il Radar già aperto va in primo piano e apre la notizia; se è chiuso si apre lì
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || "./", self.registration.scope).href;
+  e.waitUntil((async () => {
+    const finestre = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const aperta = finestre.find((c) => c.url.startsWith(self.registration.scope));
+    if (aperta) {
+      try { await aperta.focus(); } catch { /* resta dov'è */ }
+      aperta.postMessage({ radar: "apri", url });
+      return;
+    }
+    await self.clients.openWindow(url);
+  })());
 });
