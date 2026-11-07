@@ -7,8 +7,8 @@
 //   3. Tieni premuto il widget → Modifica widget → Script: Radar.
 // Sulla schermata di blocco va uguale (Personalizza → widget → Scriptable).
 //
-// Mostra le notizie principali con la foto, il logo della testata, la sezione e il titolo.
-// Toccandone una si apre l'articolo.
+// Mostra le notizie principali sul colore della loro sezione, con il logo della testata e il titolo.
+// Toccandolo si apre il Radar.
 // Il campo "Parameter" del widget, facoltativo, cambia quali notizie. Esempi:
 //   sezioni: finanza, ai          (finanza, economia, ai, tech, scienza; senza, finanza, economia e ai)
 //   paesi: it, eu                 (it, eu, us, gb)
@@ -22,7 +22,7 @@ const PROVA = ""   // per provarlo dentro Scriptable con un parametro, per esemp
 const RADAR = "https://buildtech26.github.io/radar/"
 const FM = FileManager.local()
 const CACHE = FM.joinPath(FM.documentsDirectory(), "radar-widget.json")
-const FOTO = FM.joinPath(FM.documentsDirectory(), "radar-widget-foto")
+const FOTO = FM.joinPath(FM.documentsDirectory(), "radar-widget-foto")   // i loghi (il nome è rimasto da quando c'erano le foto)
 
 // ------------------------------------------------------------ scelte
 const P = leggiParametro((args.widgetParameter ?? PROVA) || "")
@@ -111,9 +111,10 @@ function scegliNotizie(d, quante) {
 
 const titolo = (n) => (traduci && n.lingua !== "it" && n.titolo_it ? n.titolo_it : n.titolo)
 
-// ------------------------------------------------------------ foto e loghi
-// Si scaricano una volta sola e restano sul telefono (le foto 3 giorni, i loghi 2 settimane), già rimpicciolite:
-// un widget ha poca memoria e poco tempo.
+// ------------------------------------------------------------ loghi
+// Si scaricano una volta sola e restano sul telefono due settimane, già rimpiccioliti: un widget ha poca memoria
+// e poco tempo. Le foto non ci sono più (Mattia, 07/11/2026): quelle rimaste dalle versioni vecchie si cancellano
+// da sole dopo tre giorni.
 function codice(s) {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
@@ -131,17 +132,17 @@ function rimpicciolisci(img, lato) {
   return dc.getImage()
 }
 
-async function immagine(url, logo = false) {
+async function logo(url) {
   if (!url) return null
-  const file = FM.joinPath(FOTO, (logo ? "logo-" : "") + codice(url) + (logo ? ".png" : ".jpg"))
+  const file = FM.joinPath(FOTO, "logo-" + codice(url) + ".png")
   if (FM.fileExists(file)) {
     try { return Image.fromFile(file) } catch (e) {}
   }
   try {
     const r = new Request(url)
     r.timeoutInterval = 8
-    const img = rimpicciolisci(await r.loadImage(), logo ? 96 : 900)
-    FM.write(file, logo ? Data.fromPNG(img) : Data.fromJPEG(img))
+    const img = rimpicciolisci(await r.loadImage(), 96)
+    FM.write(file, Data.fromPNG(img))
     return img
   } catch (e) {
     return null
@@ -157,37 +158,8 @@ function pulisciFoto() {
   }
 }
 
-async function prepara(nn) {   // foto e logo di ogni notizia, tutte insieme
-  await Promise.all(nn.map(async (n) => {
-    const [foto, logo] = await Promise.all([immagine(n.immagine), immagine(n.logo && RADAR + n.logo, true)])
-    n._foto = foto
-    n._logo = logo
-  }))
-}
-const fotoBuona = (n, minima) => n._foto && n._foto.size.width >= minima
-
-// la foto ritagliata a misura, con il velo scuro in basso (e un filo in alto) perché il testo bianco si legga
-function copertina(img, W, H, velo = true) {
-  const dc = new DrawContext()
-  dc.size = new Size(W, H)
-  dc.respectScreenScale = false
-  dc.opaque = true
-  const { width: iw, height: ih } = img.size
-  const k = Math.max(W / iw, H / ih)
-  dc.drawImageInRect(img, new Rect((W - iw * k) / 2, (H - ih * k) / 2, iw * k, ih * k))
-  if (velo) {
-    const fasce = 40
-    const sfuma = (da, a, forza, cresce) => {
-      for (let i = 0; i < fasce; i++) {
-        const t = cresce ? i / (fasce - 1) : 1 - i / (fasce - 1)
-        dc.setFillColor(new Color("#000000", forza * Math.pow(t, 1.6)))
-        dc.fillRect(new Rect(0, da + ((a - da) * i) / fasce, W, (a - da) / fasce + 1))
-      }
-    }
-    sfuma(H * 0.32, H, 0.86, true)
-    sfuma(0, H * 0.3, 0.38, false)
-  }
-  return dc.getImage()
+async function prepara(nn) {   // il logo di ogni notizia, tutti insieme
+  await Promise.all(nn.map(async (n) => { n._logo = await logo(n.logo && RADAR + n.logo) }))
 }
 
 function sfumatura(n) {
@@ -243,21 +215,22 @@ function testata(dove, n, { lato, font, colore, conOmbra }) {
   return r
 }
 
-// l'etichetta della sezione: piena del suo colore sulle foto, chiara sui fondi già colorati
-function etichetta(dove, n, suColore = false) {
+// l'etichetta della sezione, chiara sul fondo già colorato
+function etichetta(dove, n) {
   const s = dove.addStack()
-  s.backgroundColor = suColore ? new Color("#ffffff", 0.24) : new Color(sez(n).pieno)
+  s.backgroundColor = new Color("#ffffff", 0.24)
   s.cornerRadius = 5
   s.setPadding(2, 6, 2, 6)
   testo(s, sez(n).nome[IT ? 0 : 1].toUpperCase(), Font.heavySystemFont(9), BIANCO)
   return s
 }
 
-// la notizia grande, su foto o sul colore della sezione: testata in alto, etichetta e titolo in basso
+// la notizia grande, sul colore della sezione: testata in alto, etichetta e titolo in basso
 function copertinaNotizia(dove, n, { righe, font }) {
+  dove.backgroundGradient = sfumatura(n)
   testata(dove, n, { lato: 20, font: Font.semiboldSystemFont(11.5), colore: BIANCO2, conOmbra: true })
   dove.addSpacer()
-  etichetta(dove, n, !n._usaFoto)
+  etichetta(dove, n)
   dove.addSpacer(5)
   const r = dove.addStack()
   const t = ombra(testo(r, titolo(n), font, BIANCO, righe))
@@ -265,14 +238,8 @@ function copertinaNotizia(dove, n, { righe, font }) {
   r.addSpacer()
 }
 
-// il quadratino a sinistra delle righe: la foto, o il simbolo della sezione sul suo colore
+// il quadratino a sinistra delle righe: il simbolo della sezione sul suo colore
 function miniatura(dove, n, lato) {
-  if (n._foto) {
-    const i = dove.addImage(copertina(n._foto, lato * 3, lato * 3, false))
-    i.imageSize = new Size(lato, lato)
-    i.cornerRadius = lato * 0.22
-    return
-  }
   const s = dove.addStack()
   s.size = new Size(lato, lato)
   s.cornerRadius = lato * 0.22
@@ -289,7 +256,6 @@ function miniatura(dove, n, lato) {
 // una riga: miniatura, poi testata (col colore della sezione) e titolo
 function riga(dove, n, { lato, font, righe }) {
   const r = dove.addStack()
-  r.url = n.link
   r.centerAlignContent()
   miniatura(r, n, lato)
   r.addSpacer(11)
@@ -308,24 +274,11 @@ function vuoto(w, messaggio, colore = COL.testo2) {
   w.addSpacer()
 }
 
-// la prima notizia con una foto abbastanza larga tra le prime quattro va in copertina; se non c'è, la prima
-function sceltaCopertina(nn, minima) {
-  const c = nn.slice(0, 4).find((n) => fotoBuona(n, minima)) || nn[0]
-  c._usaFoto = fotoBuona(c, minima)
-  return c
-}
-function fondoCopertina(dove, n, W, H) {
-  if (n._usaFoto) dove.backgroundImage = copertina(n._foto, W, H)
-  else dove.backgroundGradient = sfumatura(n)
-}
-
 // ------------------------------------------------------------ le misure
+// Ogni tocco, in qualunque punto, apre il Radar: è il w.url messo in costruisci().
 function piccolo(w, nn) {
-  const n = sceltaCopertina(nn, 240)
   w.setPadding(13, 13, 13, 13)
-  w.url = n.link
-  fondoCopertina(w, n, 480, 480)
-  copertinaNotizia(w, n, { righe: 4, font: Font.boldSystemFont(15) })
+  copertinaNotizia(w, nn[0], { righe: 4, font: Font.boldSystemFont(15) })
 }
 
 function medio(w, nn) {
@@ -341,14 +294,12 @@ function medio(w, nn) {
 function grande(w, nn) {
   w.setPadding(14, 14, 14, 14)
   w.backgroundColor = COL.sfondo
-  const n = sceltaCopertina(nn, 400)
+  const n = nn[0]
   const c = w.addStack()
   c.layoutVertically()
-  c.url = n.link
   c.size = new Size(0, 152)
   c.cornerRadius = 16
   c.setPadding(11, 12, 11, 12)
-  fondoCopertina(c, n, 960, 440)
   copertinaNotizia(c, n, { righe: 2, font: Font.boldSystemFont(16) })
   for (const altra of nn.filter((x) => x !== n).slice(0, 3)) {
     w.addSpacer(11)
@@ -360,15 +311,13 @@ function grande(w, nn) {
 function grandeIpad(w, nn) {   // la misura più grande dell'iPad: copertina a sinistra, quattro righe a destra
   w.setPadding(16, 16, 16, 18)
   w.backgroundColor = COL.sfondo
-  const n = sceltaCopertina(nn, 400)
+  const n = nn[0]
   const fila = w.addStack()
   const c = fila.addStack()
   c.layoutVertically()
-  c.url = n.link
   c.size = new Size(330, 0)
   c.cornerRadius = 18
   c.setPadding(14, 14, 14, 14)
-  fondoCopertina(c, n, 900, 900)
   copertinaNotizia(c, n, { righe: 4, font: Font.boldSystemFont(19) })
   fila.addSpacer(18)
   const dx = fila.addStack()
@@ -383,7 +332,6 @@ function grandeIpad(w, nn) {   // la misura più grande dell'iPad: copertina a s
 // schermata di blocco: lì iOS toglie i colori, quindi solo testo
 function bloccoRiga(w, nn) {
   const n = nn[0]
-  w.url = n.link
   testo(w, n.fonte, Font.mediumSystemFont(11), new Color("#ffffff", 0.7)).minimumScaleFactor = 0.8
   w.addSpacer(2)
   testo(w, titolo(n), Font.semiboldSystemFont(13), BIANCO, 2)
@@ -391,7 +339,6 @@ function bloccoRiga(w, nn) {
 
 function bloccoTondo(w) {
   w.addAccessoryWidgetBackground = true
-  w.url = RADAR
   const s = w.addStack()
   s.addSpacer()
   const img = s.addImage(SFSymbol.named("newspaper").image)
@@ -401,7 +348,6 @@ function bloccoTondo(w) {
 }
 
 function bloccoLinea(w, nn) {
-  w.url = nn[0].link
   testo(w, titolo(nn[0]), Font.mediumSystemFont(12), BIANCO)
 }
 
