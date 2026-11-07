@@ -341,7 +341,11 @@ def raggruppa(voci, ore=36, soglia=11.0, quota=0.18, soglia_titoli=8.0):
     Tre prove insieme: un appiglio raro in comune, abbastanza segni in comune nel testo, e abbastanza nei soli
     titoli. L'ultima tiene separati i resoconti di Borsa, che nel testo si somigliano tutti (Hong Kong, Tokyo,
     Seul…) ma nel titolo no. Le soglie sono tarate a mano su notizie vere del 05/11/2026: meglio una notizia
-    doppia in più che due fatti diversi fusi in uno."""
+    doppia in più che due fatti diversi fusi in uno.
+    Ritocchi del 07/11/2026, su 702 notizie: una testata compare una volta sola per gruppo (TechCrunch su due
+    novità diverse di Muse finiva insieme); i soli nomi non bastano, serve anche una parola o un numero preciso
+    in comune (Musk e SpaceX in tre fatti diversi, Oppo X10 Ultra e X10 Pro Max); due resoconti di Borsa a più
+    di 4 ore di distanza sono momenti diversi della giornata."""
     import math
     minuscole = parole_minuscole(voci)
     s, ap = zip(*[segni(v, minuscole) for v in voci]) if voci else ((), ())
@@ -354,6 +358,7 @@ def raggruppa(voci, ore=36, soglia=11.0, quota=0.18, soglia_titoli=8.0):
     idf = {t: math.log(n / c) for t, c in df.items()}
     # un appiglio che compare in mezza rassegna (Trump, Euro, OpenAI) non basta a dire "stesso fatto"
     raro = max(3, 0.04 * n)
+    tutti_ap = ap   # anche quelli frequenti: servono a capire se due notizie hanno in comune solo dei nomi
     ap = [{t for t in a if df[t] <= raro} for a in ap]
     peso = [sum(idf[t] for t in insieme) or 1 for insieme in s]
     gruppi = []   # [[indici]]
@@ -362,8 +367,11 @@ def raggruppa(voci, ore=36, soglia=11.0, quota=0.18, soglia_titoli=8.0):
             continue
         meglio, punti_meglio = None, 0
         for g in gruppi:
+            if any(voci[j]["fonte"] == voci[i]["fonte"] for j in g):   # "Anche su" con la stessa testata due volte
+                continue
             for j in g:
-                if abs(voci[i]["data"] - voci[j]["data"]) > ore * 3600e3 or voci[i]["fonte"] == voci[j]["fonte"]:
+                distanza = abs(voci[i]["data"] - voci[j]["data"])
+                if distanza > ore * 3600e3:
                     continue
                 if not (ap[i] & ap[j]):
                     continue
@@ -372,8 +380,16 @@ def raggruppa(voci, ore=36, soglia=11.0, quota=0.18, soglia_titoli=8.0):
                 if len(comuni) < 3 or punti < soglia or punti / min(peso[i], peso[j]) < quota or punti <= punti_meglio:
                     continue
                 # nei titoli: abbastanza segni, oppure due appigli rari ("Lagarde" e "President")
-                if sum(idf.get(t, 0) for t in st[i] & st[j]) >= soglia_titoli or len(apt[i] & apt[j] & ap[i]) >= 2:
-                    meglio, punti_meglio = g, punti
+                if not (sum(idf.get(t, 0) for t in st[i] & st[j]) >= soglia_titoli or len(apt[i] & apt[j] & ap[i]) >= 2):
+                    continue
+                # oltre ai nomi, qualcosa sul fatto: una parola, o un numero preciso (1.2, 4%, 165.000, non il 10 di X10)
+                resto = {t for t in comuni - tutti_ap[i] - tutti_ap[j] if not t.startswith("n:")} \
+                    | {t for t in comuni if t.startswith("n:") and ("." in t or "%" in t or len(t) >= 5)}
+                if not resto:
+                    continue
+                if "c:borsa" in st[i] and "c:borsa" in st[j] and distanza > 4 * 3600e3:   # mattina e sera
+                    continue
+                meglio, punti_meglio = g, punti
         if meglio is not None:
             meglio.append(i)
         else:
@@ -700,6 +716,42 @@ def leggi_json(nome):
     return json.loads((QUI / nome).read_text(encoding="utf-8"))
 
 
+def per_widget(dati, per_sezione=15, punti=24):
+    """widget.json: il riassunto leggero per il widget di iPhone e iPad (Scriptable, sito/widget/radar.js).
+    Il widget si aggiorna ogni mezz'ora anche coi dati del telefono: qualche decina di KB invece del MB di
+    dati.json. Una notizia per fatto (italiana se c'è, come nell'app), le più recenti di ogni sezione, e i
+    mercati con l'andamento di oggi ridotto a pochi punti per la linea."""
+    gruppi = {}
+    for v in dati["notizie"]:
+        if v["data"]:
+            gruppi.setdefault(v.get("gruppo") or v["id"], []).append(v)
+    scelte = []
+    for g in gruppi.values():
+        v = next((x for x in g if x["lingua"] == "it"), None) or max(g, key=lambda x: x["data"])
+        scelte.append((v, len(g)))
+    scelte.sort(key=lambda c: -c[0]["data"])
+    notizie, contate = [], {}
+    for v, testate in scelte:
+        if contate.get(v["sezione"], 0) >= per_sezione:
+            continue
+        contate[v["sezione"]] = contate.get(v["sezione"], 0) + 1
+        tr = v.get("traduzione") or {}
+        notizie.append({k: v[k] for k in ("id", "titolo", "fonte", "data", "link", "sezione", "paese", "lingua")}
+                       | ({"titolo_it": tr["titolo"]} if tr.get("lingua") == "it" and tr.get("titolo") else {})
+                       | ({"testate": testate} if testate > 1 else {}))
+    mercati = []
+    for m in dati["mercati"]:
+        oggi = m.get("oggi") or {}
+        p = oggi.get("punti") or []
+        corti = p[::-(-len(p) // punti)] if p else []
+        if p and corti[-1] != p[-1]:
+            corti.append(p[-1])
+        mercati.append({k: m[k] for k in ("simbolo", "nome", "breve", "categoria", "valuta", "prezzo", "var_giorno", "en") if k in m}
+                       | ({"predefinito": True} if m.get("predefinito") else {})
+                       | ({"punti": corti, "riferimento": oggi.get("riferimento")} if corti else {}))
+    return {"aggiornato": dati["aggiornato"], "notizie": notizie, "mercati": mercati}
+
+
 def raccogli():
     interessi = leggi_json("interessi.json")
     inizio = time.time()
@@ -724,6 +776,7 @@ def raccogli():
     SITO.mkdir(exist_ok=True)
     if voci:  # senza notizie (rete giù) si tiene il dati.json di prima invece di svuotare la pagina
         (SITO / "dati.json").write_text(json.dumps(dati, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        (SITO / "widget.json").write_text(json.dumps(per_widget(dati), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"{len(voci)} notizie, {len(quote)} quotazioni, {len(dati['errori'])} errori in {time.time() - inizio:.1f}s")
     for e in dati["errori"]:
         print(f"  ! {e['fonte']}: {e['errore']}")
