@@ -544,7 +544,7 @@ def mercati(titoli):
 # La chiave: variabili d'ambiente AZURE_TRANSLATOR_KEY e AZURE_TRANSLATOR_REGION (su GitHub, i secrets), oppure il
 # file 00-SYSTEM/credenziali/radar-azure.env del SecondBrain. Si legge e basta: non finisce mai nei log né nei dati.
 # Il piano gratuito dà 2 milioni di caratteri al mese: ci si ferma prima, a TRADUZIONI_MAX (il conto è nel file).
-# Attenzione: se traducono sia il PC sia GitHub, il conto è doppio (vedi README, "Prima di pubblicare").
+# Attenzione: se traducono sia il PC sia GitHub, il conto è doppio (vedi README, "Pubblicazione").
 
 TRADUZIONI = QUI / "traduzioni.json"
 CREDENZIALI_AZURE = QUI.parent.parent / "00-SYSTEM" / "credenziali" / "radar-azure.env"
@@ -563,7 +563,9 @@ def chiave_azure():
                 chiave = v
             elif k == "AZURE_TRANSLATOR_REGION":
                 regione = v
-    return chiave, regione
+    # i secrets incollati a mano su GitHub possono portarsi dietro spazi, a capo o virgolette
+    pulisci = lambda s: (s or "").strip().strip("\"'").strip() or None
+    return pulisci(chiave), pulisci(regione)
 
 
 def chiedi_traduzione(testi, da, a, chiave, regione):
