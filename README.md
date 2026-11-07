@@ -114,8 +114,7 @@ o fornitori, va aggiornata insieme alla data in cima e al riassunto in Info (`fo
 4. Traduzioni: in GitHub → Settings → Secrets and variables → Actions, i secrets `AZURE_TRANSLATOR_KEY` e
    `AZURE_TRANSLATOR_REGION`.
 5. Traduzioni, quota: il piano gratuito è 2 milioni di caratteri al mese per la chiave, e oggi ne servono ~1,2.
-   Se traducono sia una copia in locale sia GitHub con la stessa chiave, il conto raddoppia: in locale togliere la
-   chiave o mettere `RADAR_TRADUZIONI_MAX` basso.
+   Per questo traduce solo GitHub: una copia in locale prende le traduzioni dalla versione pubblicata (vedi sotto).
 
 ## Traduzioni
 
@@ -127,4 +126,7 @@ o se Azure non risponde, non si traduce e l'app mostra l'originale; l'errore fin
 Con l'app in inglese le notizie inglesi si aprono in originale, e "Show in Italian" mostra la stessa traduzione
 (una traduzione in un'altra lingua resta a un tocco, quella nella lingua dell'app si mostra subito).
 Per tradurre anche le notizie italiane in inglese (app in inglese): `TRADUCI = {"en": "it", "it": "en"}`.
+Chiama Azure solo il giro su GitHub. In locale (`avvia.cmd`, `--nascosto`) `raccogli.py` copia le traduzioni da
+`https://buildtech26.github.io/radar/dati.json` (`RADAR_ONLINE`) per le notizie che ci sono anche lì: quelle appena
+uscite restano in originale fino al giro dopo. Per tradurre davvero in locale: `RADAR_TRADUZIONI=azure`.
 Ad Azure va solo il testo pubblico delle notizie, niente degli utenti: la privacy non cambia.

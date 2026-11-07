@@ -544,7 +544,7 @@ def mercati(titoli):
 # La chiave: variabili d'ambiente AZURE_TRANSLATOR_KEY e AZURE_TRANSLATOR_REGION (su GitHub, i secrets), oppure il
 # file 00-SYSTEM/credenziali/radar-azure.env del SecondBrain. Si legge e basta: non finisce mai nei log né nei dati.
 # Il piano gratuito dà 2 milioni di caratteri al mese: ci si ferma prima, a TRADUZIONI_MAX (il conto è nel file).
-# Attenzione: se traducono sia il PC sia GitHub, il conto è doppio (vedi README, "Pubblicazione").
+# Per non contare doppio, in locale non si chiama Azure: vedi traduzioni_online() qui sotto.
 
 TRADUZIONI = QUI / "traduzioni.json"
 CREDENZIALI_AZURE = QUI.parent.parent / "00-SYSTEM" / "credenziali" / "radar-azure.env"
@@ -594,7 +594,28 @@ def chiedi_traduzione(testi, da, a, chiave, regione):
             raise RuntimeError(f"HTTP {e.code} {msg}".strip()) from None
 
 
+# Su GitHub (GITHUB_ACTIONS) traduce Azure; altrove, di norma, le traduzioni si prendono dalla versione pubblicata,
+# così la quota gratuita la consuma una sola copia. RADAR_TRADUZIONI=azure fa tradurre anche in locale.
+ONLINE = os.environ.get("RADAR_ONLINE", "https://buildtech26.github.io/radar/dati.json")
+DA_AZURE = os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("RADAR_TRADUZIONI", "").lower() == "azure"
+
+
+def traduzioni_online(voci):
+    """Copia le traduzioni dalla versione pubblicata per le notizie che ci sono anche lì. Niente richieste ad Azure."""
+    try:
+        online = json.loads(scarica(ONLINE))
+    except Exception as e:
+        return [{"fonte": "Traduzioni", "errore": f"versione online non raggiungibile ({type(e).__name__}): restano in originale"}]
+    fatte = {n["id"]: n["traduzione"] for n in online.get("notizie", []) if n.get("traduzione")}
+    for v in voci:
+        if v["id"] in fatte:
+            v["traduzione"] = fatte[v["id"]]
+    return []
+
+
 def traduci(voci):
+    if not DA_AZURE:
+        return traduzioni_online(voci)
     chiave, regione = chiave_azure()
     if not chiave:
         return []
