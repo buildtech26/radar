@@ -1,0 +1,63 @@
+# Ogni ora, dalle 6 alle 23 italiane, scarica notizie e prezzi e ripubblica la pagina su GitHub Pages.
+# Niente commit dei dati: dati.json vive solo dentro la pagina pubblicata.
+name: Aggiorna e pubblica
+
+on:
+  schedule:
+    - cron: "7 5-22 * * *"   # orari in UTC: 6:07-23:07 d'inverno, 7:07-00:07 d'estate
+    - cron: "0 4 1 * *"      # il primo del mese: segno di vita, vedi il job "attivo"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  pubblica:
+    if: github.event.schedule != '0 4 1 * *'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # le traduzioni già fatte passano da un giro all'altro: si traducono solo le notizie nuove
+      - uses: actions/cache@v4
+        with:
+          path: traduzioni.json
+          key: traduzioni-${{ github.run_id }}
+          restore-keys: traduzioni-
+      - name: Raccogli notizie e prezzi
+        run: python raccogli.py
+        env:
+          AZURE_TRANSLATOR_KEY: ${{ secrets.AZURE_TRANSLATOR_KEY }}
+          AZURE_TRANSLATOR_REGION: ${{ secrets.AZURE_TRANSLATOR_REGION }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: sito
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  # GitHub spegne le pianificazioni dei repo pubblici fermi da 60 giorni: un commit vuoto al mese lo evita.
+  attivo:
+    if: github.event.schedule == '0 4 1 * *'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "Radar attivo: $(date -u +%Y-%m)"
+          git push

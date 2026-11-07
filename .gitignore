@@ -1,0 +1,9 @@
+sito/dati.json
+traduzioni.json
+radar.log
+__pycache__/
+*.pyc
+.env
+# il PC di Mattia: profilo Chrome, Tailscale, note personali
+apri-app.pyw
+note-pc.md

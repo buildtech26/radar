@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f2f2f7">
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Radar">
+<meta name="description" content="Finanza, economia, AI, tecnologia e scienza: le notizie che contano, scelte per te.">
+<title>Radar</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icona.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icona-180.png">
+<link rel="stylesheet" href="stile.css">
+<script>/* prima del disegno: se la barra laterale era chiusa, la pagina parte già senza */try{if(localStorage.getItem("radar.lateraleChiusa")==="true")document.documentElement.classList.add("senza-laterale")}catch(e){}
+/* e già chiara o scura: "radar.aspetto" = chiaro | scuro, se manca segue il dispositivo (vedi aspetto in app.js) */(function(){var a=null;try{a=localStorage.getItem("radar.aspetto")}catch(e){}var s=a==="chiaro"||a==="scuro"?a:(matchMedia("(prefers-color-scheme: dark)").matches?"scuro":"chiaro");document.documentElement.setAttribute("data-aspetto",s);document.querySelector('meta[name="theme-color"]').setAttribute("content",s==="scuro"?"#000000":"#f2f2f7")})();</script>
+</head>
+<body>
+<div class="app">
+  <nav class="tabbar" id="sezioni" aria-label="Sezioni">
+    <a class="tab premibile" href="#per-te" data-vista="per-te">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.9 4.6 4.6 1.9-4.6 1.9L12 16.5l-1.9-4.6L5.5 10l4.6-1.9z"/><path d="M18.5 15.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg>
+      <span>Per te</span>
+    </a>
+    <a class="tab premibile" href="#notizie" data-vista="notizie">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="14" height="16" rx="2.5"/><path d="M17.5 8h2a1.5 1.5 0 0 1 1.5 1.5V17a3 3 0 0 1-3 3"/><path d="M7 8h7M7 11.5h7M7 15h4"/></svg>
+      <span>Notizie</span>
+    </a>
+    <a class="tab premibile" href="#mercati" data-vista="mercati">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 17.5l5-5.5 4 3.5 7.5-8.5"/><path d="M15.5 7h4.5v4.5"/></svg>
+      <span>Mercati</span>
+    </a>
+    <a class="tab premibile" href="#agenda" data-vista="agenda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="8.5" cy="14.5" r=".6" fill="currentColor"/><circle cx="12" cy="14.5" r=".6" fill="currentColor"/><circle cx="15.5" cy="14.5" r=".6" fill="currentColor"/></svg>
+      <span>Agenda</span>
+    </a>
+    <a class="tab premibile" href="#salvate" data-vista="salvate">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.5-6.5 4.5v-16a1 1 0 0 1 1-1z"/></svg>
+      <span>Salvate</span>
+    </a>
+  </nav>
+
+  <div class="colonna">
+    <header class="barra" id="barra">
+      <div class="barra-sx"></div>
+      <div class="barra-titolo" id="barra-titolo" aria-hidden="true"></div>
+      <div class="barra-azioni">
+        <button class="tondo premibile" id="apri-profilo" aria-label="Il tuo Radar: temi, mercati e impostazioni" title="Il tuo Radar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3.2"/><path d="M6.2 18.4c1.3-2.1 3.4-3.2 5.8-3.2s4.5 1.1 5.8 3.2"/></svg>
+        </button>
+        <button class="tondo premibile" id="apri-glossario" aria-label="Glossario" title="Glossario">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5 8 4.5 4 4.5v13c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2v-13c-4 0-6.5.5-8 2z"/><path d="M12 6.5v13"/></svg>
+        </button>
+        <button class="tondo premibile" id="aggiorna" aria-label="Aggiorna" title="Aggiorna">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/></svg>
+        </button>
+      </div>
+    </header>
+    <main id="vista" tabindex="-1"></main>
+  </div>
+</div>
+
+<div class="velo" id="velo" hidden></div>
+<section class="foglio" id="foglio" role="dialog" aria-modal="true" aria-labelledby="foglio-titolo" tabindex="-1" hidden>
+  <div class="presa" aria-hidden="true"></div>
+  <div class="testa-foglio">
+    <h2 id="foglio-titolo"></h2>
+    <button class="chiudi premibile" id="chiudi-foglio" aria-label="Chiudi">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"/></svg>
+    </button>
+  </div>
+  <div class="contenuto" id="foglio-contenuto"></div>
+</section>
+
+<div class="avviso" id="avviso" role="status" aria-live="polite"><span id="avviso-testo"></span><button id="avviso-azione" hidden>Annulla</button></div>
+
+<script src="app.js" type="module"></script>
+</body>
+</html>
