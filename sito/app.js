@@ -231,6 +231,26 @@ function fontiSezione(s) {
 }
 
 const leggero = (n) => ({ id: n.id, titolo: n.titolo, sommario: n.sommario, link: n.link, data: n.data, immagine: n.immagine, fonte: n.fonte, sezione: n.sezione, lingua: n.lingua, paese: n.paese });
+// le salvate si portano dietro anche il testo lungo e la traduzione: dopo un paio di giorni la notizia esce da
+// dati.json, e senza questi la sottopagina tornerebbe al solo riassunto, in lingua originale (anche offline)
+const perSalvate = (n) => ({ ...leggero(n), ...(n.testo ? { testo: n.testo } : {}), ...(n.traduzione ? { traduzione: n.traduzione } : {}), salvataIl: Date.now() });
+// quelle salvate prima (o arrivate dall'account senza) li prendono dalle notizie di oggi, finché ci sono. Senza
+// segnare il tempo: è un completamento, non una scelta, e non deve vincere la sincronizzazione su un altro dispositivo
+function completaSalvate() {
+  if (!S.dati) return;
+  let cambiate = false;
+  S.salvate = S.salvate.map((s) => {
+    const oggi = S.dati.notizie.find((x) => x.id === s.id);
+    if (!oggi) return s;
+    const extra = {};
+    if (!s.testo && oggi.testo) extra.testo = oggi.testo;
+    if (!s.traduzione && oggi.traduzione) extra.traduzione = oggi.traduzione;
+    if (!Object.keys(extra).length) return s;
+    cambiate = true;
+    return { ...s, ...extra };
+  });
+  if (cambiate) salvaStato();
+}
 const salvata = (id) => S.salvate.some((n) => n.id === id);
 const letta = (id) => S.lette.some((n) => n.id === id);
 
@@ -1000,7 +1020,7 @@ function segnaLetta(n, art) {
 function alternaSalvata(n, art) {
   const era = salvata(n.id);
   if (era) S.salvate = S.salvate.filter((x) => x.id !== n.id);
-  else S.salvate = [{ ...leggero(n), salvataIl: Date.now() }, ...S.salvate];
+  else S.salvate = [perSalvate(n), ...S.salvate];
   salvaStato("salvate");
   if (art) aggiornaSegno(art, !era);
   mostraAvviso(era ? L("Tolta dalle salvate", "Removed from saved") : L("Salvata per dopo", "Saved for later"), () => { alternaSalvataSilenziosa(n, era); disegna(); });
@@ -1019,7 +1039,7 @@ function aggiornaSegno(art, ora) {
   art.querySelector(".salva-tocco")?.setAttribute("aria-label", ora ? T.togliSalvata() : T.salvaPerDopo());
 }
 function alternaSalvataSilenziosa(n, eraSalvata) {
-  if (eraSalvata) S.salvate = [{ ...leggero(n), salvataIl: Date.now() }, ...S.salvate.filter((x) => x.id !== n.id)];
+  if (eraSalvata) S.salvate = [perSalvate(n), ...S.salvate.filter((x) => x.id !== n.id)];
   else S.salvate = S.salvate.filter((x) => x.id !== n.id);
   salvaStato("salvate");
 }
@@ -1825,6 +1845,7 @@ function sincronizza() {
       SYNC.errore = "";
       if (cambiatoQui && S.profilo.interfaccia && S.profilo.interfaccia !== lingua()) { impostaLingua(S.profilo.interfaccia); traduciGuscio(); }
       if (cambiatoQui && S.dati) {
+        completaSalvate();
         compilaTemi();
         aggiornaPallino();
         if (!F.aperto && !$(".benvenuto")) disegna();
@@ -2171,6 +2192,7 @@ async function carica({ manuale = false } = {}) {
     const nuove = S.dati ? dati.notizie.filter((n) => !S.dati.notizie.some((x) => x.id === n.id)).length : 0;
     S.dati = dati;
     S.caricato = Date.now();
+    completaSalvate();
     compilaTemi();
     compilaGlossario();
     vai();

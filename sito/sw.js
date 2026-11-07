@@ -1,5 +1,5 @@
 // Radar · funziona anche senza rete (in metro, in aula): la pagina dalla cache, le notizie dall'ultima volta.
-const VERSIONE = "radar-v28";
+const VERSIONE = "radar-v29";
 const GUSCIO = ["./", "index.html", "privacy.html", "privacy-en.html", "stile.css", "app.js", "lingua.js", "conto.js", "config.js", "icona.svg", "manifest.webmanifest", "icona-180.png", "icona-192.png"];
 
 self.addEventListener("install", (e) => {
