@@ -1,9 +1,11 @@
 // Radar · funziona anche senza rete (in metro, in aula): la pagina dalla cache, le notizie dall'ultima volta.
-const VERSIONE = "radar-v30";
+const VERSIONE = "radar-v31";
 const GUSCIO = ["./", "index.html", "privacy.html", "privacy-en.html", "stile.css", "app.js", "lingua.js", "conto.js", "config.js", "icona.svg", "manifest.webmanifest", "icona-180.png", "icona-192.png"];
 
+// cache: "reload" = i file freschi dal sito, non la copia che il browser tiene fino a 10 minuti (GitHub Pages):
+// senza, una versione nuova poteva installarsi con dentro l'app.js vecchio
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSIONE).then((c) => c.addAll(GUSCIO)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSIONE).then((c) => c.addAll(GUSCIO.map((u) => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (e) => {
@@ -24,10 +26,13 @@ self.addEventListener("fetch", (e) => {
     );
     return;
   }
-  // pagina: subito dalla cache, e intanto la aggiorno per la prossima volta
+  // pagina: subito dalla cache, e intanto la aggiorno per la prossima volta (chiedendo al sito se è cambiata,
+  // non alla copia del browser)
   e.respondWith(
     caches.match(e.request).then((inCache) => {
-      const rete = fetch(e.request).then((r) => {
+      // l'apertura della pagina (mode "navigate") non si può ricopiare con opzioni: si richiede per indirizzo
+      const fresca = e.request.mode === "navigate" ? new Request(e.request.url, { cache: "no-cache" }) : new Request(e.request, { cache: "no-cache" });
+      const rete = fetch(fresca).then((r) => {
         if (r.ok) { const copia = r.clone(); caches.open(VERSIONE).then((c) => c.put(e.request, copia)); }
         return r;
       }).catch(() => inCache);
