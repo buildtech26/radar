@@ -1,0 +1,79 @@
+# Le storie di Instagram (@nodus.it) alle 7:30, 13:00 e 19:30 italiane: storie_ig.py sceglie le notizie e disegna
+# le schermate, pubblica_ig.py le pubblica con l'API di Instagram. Ogni orario è pianificato due volte (ora
+# solare e legale, GitHub ragiona in UTC): storie_ig.py --auto fa il giro una volta sola e l'altra non fa niente.
+# Le immagini vanno online sul ramo storie-ig (rifatto da zero a ogni giro, solo l'ultimo) perché Instagram le
+# scarica da un indirizzo pubblico.
+name: Storie Instagram
+
+on:
+  schedule:
+    - cron: "30 5,6 * * *"    # 7:30
+    - cron: "0 11,12 * * *"   # 13:00
+    - cron: "30 17,18 * * *"  # 19:30
+  workflow_dispatch:
+    inputs:
+      giro:
+        description: "Giro da fare subito (vuoto = quello dell'orario)"
+        type: choice
+        options: ["", mattina, pranzo, sera]
+        default: ""
+      prova:
+        description: "Prova: fa e mette online le schermate, ma non pubblica su Instagram"
+        type: boolean
+        default: true
+
+concurrency:
+  group: storie
+  cancel-in-progress: false
+
+jobs:
+  storie:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # per il ramo storie-ig con le immagini
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # il registro delle notizie usate e dei giri fatti passa da un giro all'altro
+      - uses: actions/cache/restore@v4
+        with:
+          path: storie/usate.json
+          key: storie-${{ github.run_id }}
+          restore-keys: storie-
+      - name: Scegli le notizie e disegna le schermate
+        id: storie
+        run: |
+          python storie_ig.py --auto --dati https://buildtech26.github.io/radar/dati.json \
+            ${{ inputs.giro && format('--giro {0}', inputs.giro) || '' }} ${{ inputs.prova && '--prova' || '' }}
+      - name: Salva il registro
+        if: always() && !inputs.prova
+        uses: actions/cache/save@v4
+        with:
+          path: storie/usate.json
+          key: storie-${{ github.run_id }}
+      - name: Metti online le immagini
+        if: steps.storie.outputs.cartella
+        run: |
+          pip install --quiet pillow==12.0.0
+          python pubblica_ig.py jpg "${{ steps.storie.outputs.cartella }}"
+          mkdir -p /tmp/ig/${{ steps.storie.outputs.nome }}
+          cp "${{ steps.storie.outputs.cartella }}"/jpg/*.jpg /tmp/ig/${{ steps.storie.outputs.nome }}/
+          cp "${{ steps.storie.outputs.cartella }}"/notizie.txt /tmp/ig/${{ steps.storie.outputs.nome }}/
+          cd /tmp/ig
+          git init -q -b storie-ig
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -q -m "Storie ${{ steps.storie.outputs.nome }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" storie-ig
+          sleep 10   # il tempo che gli indirizzi raw si accorgano del ramo nuovo
+          echo "Immagini: https://raw.githubusercontent.com/${{ github.repository }}/storie-ig/${{ steps.storie.outputs.nome }}/"
+      - name: Pubblica su Instagram
+        if: steps.storie.outputs.cartella && !inputs.prova
+        run: |
+          python pubblica_ig.py pubblica "${{ steps.storie.outputs.cartella }}" \
+            "https://raw.githubusercontent.com/${{ github.repository }}/storie-ig/${{ steps.storie.outputs.nome }}"
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}

@@ -4,6 +4,9 @@
     py storie_ig.py                 il giro dell'ora: mattina (prima delle 11), pranzo (prima delle 17), sera
     py storie_ig.py --giro pranzo   un giro preciso
     py storie_ig.py --prova         non segna le notizie come usate (per provare)
+    python storie_ig.py --auto --dati https://…/dati.json
+                                    su GitHub (.github/workflows/storie.yml): il giro dell'orario, se non è
+                                    già fatto; poi pubblica_ig.py lo pubblica su Instagram
 
 Tre giri al giorno, decisi da Mattia l'08/11/2026:
   mattina 7:30  copertina + la notizia migliore di ogni sezione + schermata col link a Nodus
@@ -28,10 +31,14 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 QUI = Path(__file__).resolve().parent
+ROMA = ZoneInfo("Europe/Rome")   # su GitHub l'orologio è in UTC: gli orari dei giri sono italiani
+PROFILO = "@nodus.it"
 DATI = QUI / "sito" / "dati.json"
 USCITA = QUI / "storie"
 USATE = USCITA / "usate.json"
@@ -44,6 +51,7 @@ SEZIONI = {
     "scienza": ("Scienza", "#FF6482", '<circle cx="12" cy="12" r="1.5"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(45 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(-45 12 12)"/>'),
 }
 GIRI = {"mattina": "7:30", "pranzo": "13:00", "sera": "19:30"}
+FINESTRA = timedelta(hours=3)   # con --auto un giro parte se sono passati meno di 3 ore dal suo orario (GitHub ritarda)
 GIORNI = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"]
 MESI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre",
         "novembre", "dicembre"]
@@ -209,7 +217,8 @@ h1{margin:88px 0 0;font-size:136px;line-height:.98;font-weight:800;letter-spacin
 .riga .h{font-size:34px;font-weight:600;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .avanti{margin-top:auto;font-size:32px;font-weight:600;color:#A1A1A6}
 .link{margin-top:120px;display:flex;flex-direction:column;align-items:center;gap:28px}
-.posto{width:640px;height:150px;border:4px dashed #48484A;border-radius:36px;display:grid;place-items:center;font-size:30px;color:#8E8E93}
+.bio{padding:34px 64px;border-radius:999px;background:#F5F5F7;color:#000;font-size:44px;font-weight:800;letter-spacing:-.02em;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bio span{font-size:30px;font-weight:600;color:#6E6E73;letter-spacing:0}
 .nota{margin:auto 0 0;border-top:2px solid #2C2C2E;padding-top:36px;font-size:28px;color:#8E8E93}
 """
 
@@ -252,7 +261,8 @@ def chiusura():
                   '<h2 style="margin-top:140px;font-size:132px;line-height:.98;letter-spacing:-.045em">Le altre le trovi su Nodus</h2>'
                   '<p class="testo" style="font-size:42px">Ogni ora le notizie di finanza, economia, AI, tecnologia e scienza. '
                   'In cima quelle sui temi che scegli tu, e le parole difficili spiegate semplici.</p>'
-                  '<div class="link"><div class="posto">[qui l\'adesivo link a Nodus]</div>'
+                  # l'adesivo col link non si può mettere dall'API di Instagram: il link sta nella bio
+                  f'<div class="link"><div class="bio">Link nella bio<span>{PROFILO}</span></div>'
                   '<span style="font-size:34px;font-weight:600">È gratis</span></div>'
                   '<p class="nota">Nodus serve a informarti: non è consulenza finanziaria.</p>')
 
@@ -270,12 +280,14 @@ def chrome():
 def fotografa(pagine, cartella):
     """Ogni pagina HTML → PNG 1080×1920 con Chrome senza finestra (profilo a parte: non tocca il Chrome aperto)."""
     exe = chrome()
+    # su GitHub (Ubuntu 24.04) la sandbox di Chrome non parte; le pagine sono nostre, col testo esterno già escapato
+    extra = ["--no-sandbox"] if os.environ.get("CI") else []
     with tempfile.TemporaryDirectory() as tmp:
         for i, codice in enumerate(pagine, 1):
             f = Path(tmp) / f"{i:02}.html"
             f.write_text(codice, encoding="utf-8")
             png = cartella / f"{i:02}.png"
-            subprocess.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
+            subprocess.run([exe, *extra, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
                             f"--user-data-dir={Path(tmp) / 'profilo'}", "--force-device-scale-factor=1",
                             "--window-size=1080,1920", "--virtual-time-budget=6000", "--allow-file-access-from-files",
                             f"--screenshot={png}", f.as_uri()], check=True, capture_output=True, timeout=90)
@@ -283,24 +295,64 @@ def fotografa(pagine, cartella):
 
 # ---------------------------------------------------------------- tutto insieme
 
+def giro_in_orario(adesso, registro):
+    """Per --auto (GitHub Actions): il giro il cui orario è passato da meno di FINESTRA e che oggi non è
+    ancora stato fatto. Le pianificazioni girano due volte (ora solare e legale): una delle due trova None."""
+    giorno = adesso.strftime("%Y-%m-%d")
+    for giro, ora in GIRI.items():
+        h, m = map(int, ora.split(":"))
+        inizio = adesso.replace(hour=h, minute=m, second=0, microsecond=0)
+        if inizio <= adesso < inizio + FINESTRA and f"{giorno} {giro}" not in registro:
+            return giro
+    return None
+
+
+def leggi_dati(origine):
+    if origine.startswith("https://"):
+        richiesta = urllib.request.Request(origine, headers={"User-Agent": "Nodus storie"})
+        with urllib.request.urlopen(richiesta, timeout=60) as r:
+            return json.loads(r.read().decode("utf-8"))
+    return json.loads(Path(origine).read_text(encoding="utf-8"))
+
+
+def esito(**valori):
+    """Su GitHub Actions passa i valori ai passi dopo (cartella da pubblicare)."""
+    if os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+            for k, v in valori.items():
+                f.write(f"{k}={v}\n")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--giro", choices=GIRI)
+    ap.add_argument("--auto", action="store_true", help="il giro dell'orario (se non è già fatto), altrimenti niente")
+    ap.add_argument("--dati", default=str(DATI), help="file o indirizzo https di dati.json")
     ap.add_argument("--prova", action="store_true", help="non segna le notizie come usate")
     a = ap.parse_args()
-    oggi = datetime.now().astimezone()
-    giro = a.giro or ("mattina" if oggi.hour < 11 else "pranzo" if oggi.hour < 17 else "sera")
+    oggi = datetime.now(ROMA)
     giorno = oggi.strftime("%Y-%m-%d")
-
-    dati = json.loads(DATI.read_text(encoding="utf-8"))
     try:
         registro = json.loads(USATE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         registro = {}
+    if a.auto:
+        giro = a.giro or giro_in_orario(oggi, registro)
+        if not giro:
+            print(f"{oggi:%H:%M}: nessun giro da fare adesso")
+            return
+    else:
+        giro = a.giro or ("mattina" if oggi.hour < 11 else "pranzo" if oggi.hour < 17 else "sera")
+
+    dati = leggi_dati(a.dati)
     usate = set(registro.get(giorno, []))
     scelte = scegli(dati, giro, oggi, usate)
     if not scelte:
         print(f"{giro}: meno di 2 notizie buone uscite dopo l'ultimo giro, la storia salta")
+        if not a.prova:   # segnato come fatto: il secondo orario della pianificazione non ci riprova
+            registro[f"{giorno} {giro}"] = 0
+            USATE.parent.mkdir(parents=True, exist_ok=True)
+            USATE.write_text(json.dumps(registro), encoding="utf-8")
         return
 
     loghi = {f["nome"]: (QUI / "sito" / f["logo"]).as_uri() for f in dati["fonti"] if f.get("logo")}
@@ -322,8 +374,10 @@ def main():
 
     if not a.prova:
         registro[giorno] = sorted(usate | {c["n"]["id"] for c in scelte})
+        registro[f"{giorno} {giro}"] = len(pagine)   # il giro è fatto: con --auto non si ripete
         registro = {k: v for k, v in registro.items() if k >= (oggi - timedelta(days=3)).strftime("%Y-%m-%d")}
         USATE.write_text(json.dumps(registro), encoding="utf-8")
+    esito(cartella=cartella.as_posix(), nome=cartella.name)
     print(f"{giro}: {len(pagine)} schermate in {cartella}")
     for c in scelte:
         print(f"  [{c['n']['sezione']}] {c['titolo'][:80]} ({c['n']['fonte']}, punti {c['punti']:.1f}, cifra {c['cifra'] or '-'})")

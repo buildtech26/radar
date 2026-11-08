@@ -165,7 +165,19 @@ con la foto (prima 335); senza restano FT (pagine chiuse), Bank of England, ESA,
 più `notizie.txt` con titoli e link da controllare. Mattina: copertina + la notizia migliore di ogni sezione + link;
 pranzo e sera: 2–3 notizie nuove (se sono meno di 2 il giro salta), la sera col link. Le notizie usate stanno in
 `storie/usate.json` e non tornano nello stesso giorno (`--prova` non le segna). Testi delle testate (tradotti
-se inglesi) con la fonte, niente AI, niente foto dei giornali, niente prezzi. Pubblicazione: ancora da collegare.
+se inglesi) con la fonte, niente AI, niente foto dei giornali, niente prezzi.
+
+Pubblicazione su **@nodus.it**, da sola: `.github/workflows/storie.yml` gira alle 7:30, 13:00 e 19:30 italiane
+(ogni orario due volte in UTC, per l'ora legale: `--auto` fa il giro una volta sola). Legge `dati.json` dal sito
+pubblicato, fa i JPG (`pubblica_ig.py jpg`), li mette sul ramo `storie-ig` (rifatto da zero a ogni giro: Instagram
+scarica le immagini da `raw.githubusercontent.com`) e li pubblica con l'API di Instagram (`pubblica_ig.py
+pubblica`), una storia per schermata. L'adesivo col link non si può mettere dall'API: l'ultima schermata dice
+"Link nella bio". Da Actions → Storie Instagram → Run workflow si fa un giro a mano; con "Prova" acceso fa e mette
+online le schermate senza pubblicare.
+
+Il token sta nel segreto `INSTAGRAM_TOKEN` del repo e **dura 60 giorni**: quando scade il giro fallisce (GitHub
+manda una mail) e va rifatto da developers.facebook.com → l'app → Instagram → Configurazione dell'API con login
+di Instagram → Genera token, poi incollato di nuovo nel segreto.
 
 ## Traduzioni
 
