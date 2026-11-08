@@ -1374,28 +1374,6 @@ function intestazione(titolo, sotto) {
   return h("div", { class: "intestazione" }, h1, sotto ? h("p", {}, sotto) : null);
 }
 
-function stripMercati() {
-  const box = h("div", { class: "striscia", role: "list", "aria-label": L("Mercati", "Markets") });
-  for (const m0 of mieiMercati()) {
-    const m = loc(m0);
-    const b = h("a", { class: "mini premibile" + (m.simbolo === S.profilo.mio ? " tuo" : ""), href: "#mercati", role: "listitem" },
-      h("div", { class: "nome" }, m.simbolo === S.profilo.mio ? icona("stellaPiena", "stellina") : null, m.breve || m.nome),
-      h("div", { class: "prezzo" }, fmt(m.prezzo, decimali(m)) + unita(m)),
-      pillola(m.var_giorno, L("Oggi", "Today")),
-      m.oggi
-        ? grafico(m.oggi.punti.map((c) => [0, c]), { larghezza: 120, altezza: 28, base: true, riferimento: m.oggi.riferimento })
-        : grafico(m.serie.slice(-2), { larghezza: 120, altezza: 28, base: true }));
-    b.setAttribute("aria-label", `${m.nome}: ${fmt(m.prezzo, decimali(m))}${unita(m)}, ${L("oggi", "today")} ${m.var_giorno > 0 ? "+" : ""}${fmt(m.var_giorno, 2)}%`);
-    box.append(b);
-  }
-  return box;
-}
-
-function prossimoEvento() {
-  const adesso = Date.now();
-  return S.dati.agenda.eventi.map((e) => ({ ...e, t: new Date(`${e.data}T${e.ora || "00:00"}:00`).getTime() })).find((e) => e.t > adesso - 2 * 36e5);
-}
-
 function calendarino(e) {
   const d = new Date(e.t);
   return h("div", { class: "calendario", style: `--c:${COLORI_AGENDA[e.tipo] || "var(--accento)"}`, "aria-hidden": "true" },
@@ -1420,18 +1398,7 @@ function vistaPerTe() {
   const storie = strisciaStorie();
   if (storie) parti.push(storie);
   if (Date.now() - S.dati.aggiornato > 3 * 36e5) parti.push(h("div", { class: "banner" }, L("L'aggiornamento automatico è in ritardo: le notizie nuove arrivano appena riparte.", "Automatic updates are running late: new stories will arrive as soon as they resume.")));
-  if (mieiMercati().length) parti.push(stripMercati());
-  const e0 = prossimoEvento();
-  if (e0) {
-    const e = loc(e0);
-    parti.push(h("a", { class: "prossimo premibile", href: "#agenda" },
-      calendarino(e),
-      h("div", { class: "cosa" },
-        h("div", { class: "sopratitolo" }, L("Prossimo in agenda", "Next on the calendar")),
-        h("div", { class: "tit" }, e.titolo),
-        h("div", { class: "quando" }, `${data(e.t, { weekday: "long", day: "numeric", month: "long" })}, ${e.ora} · ${quantoManca(e.t)}`)),
-      icona("freccia", "freccia")));
-  }
+  // mercati e prossimo appuntamento non stanno più qui (scelto da Mattia l'08/11/2026): hanno le loro schede in basso
   const bInteressi = h("button", { type: "button", class: "link premibile" }, L("I tuoi temi", "Your topics"));
   bInteressi.addEventListener("click", () => foglioProfilo("temi"));
   parti.push(h("h2", { class: "sezione" }, L("Scelte per te", "Picked for you"), bInteressi));
