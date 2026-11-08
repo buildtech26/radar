@@ -148,6 +148,16 @@ o fornitori, va aggiornata insieme alla data in cima e al riassunto in Info (`fo
 5. Traduzioni, quota: il piano gratuito è 2 milioni di caratteri al mese per la chiave, e oggi ne servono ~1,2.
    Per questo traduce solo GitHub: una copia in locale prende le traduzioni dalla versione pubblicata (vedi sotto).
 
+## Foto delle notizie
+
+Le schede mostrano la foto grande sotto il testo, in 16:9, come i link su X (Tu → Foto delle notizie: Grandi o
+Piccole, per dispositivo, `radar.foto`). Una foto sotto i 400 px resta miniatura a lato anche con Grandi.
+Le trova `completa_foto()` in `raccogli.py`: quella del feed; ingrandita dall'indirizzo quando si può (BBC
+240 → 976); se manca o è piccola (Guardian 140, firmato), l'og:image della pagina dell'articolo, aperta una volta
+sola per notizia (`immagini.json`, su GitHub nella cache di Actions). Si scartano loghi e icone: la stessa immagine
+su 3+ notizie della stessa fonte, o un nome come `social-default`, `logo_…`. L'08/11/2026: 626 notizie su 676
+con la foto (prima 335); senza restano FT (pagine chiuse), Bank of England, ESA, Simon Willison e poche altre.
+
 ## Traduzioni
 
 Per l'app in italiano, le notizie inglesi hanno titolo e "In breve" tradotti (solo nella notizia aperta; le schede

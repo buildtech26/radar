@@ -30,6 +30,17 @@ function impostaAspetto(a) {
 SCURO.addEventListener("change", applicaAspetto);
 applicaAspetto();
 
+// le foto delle notizie: "grandi" sotto il testo, larghe quanto la scheda (come i link su X, scelto da Mattia
+// l'08/11/2026), o "piccole", la miniatura a lato. Per dispositivo (radar.foto); lo stile lo fa data-foto su <html>.
+function sceltaFoto() {
+  try { return localStorage.getItem("radar.foto") === "piccole" ? "piccole" : "grandi"; } catch { return "grandi"; }
+}
+function impostaFoto(f) {
+  try { f === "piccole" ? localStorage.setItem("radar.foto", f) : localStorage.removeItem("radar.foto"); } catch { /* resta per questa volta */ }
+  document.documentElement.setAttribute("data-foto", f);
+}
+document.documentElement.setAttribute("data-foto", sceltaFoto());
+
 function h(tag, attr, ...figli) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attr || {})) {
@@ -747,6 +758,8 @@ function scheda(n, { temi = [], compatta = false, inSalvate = false } = {}) {
   if (!compatta && n.immagine) {
     const img = h("img", { class: "thumb", src: n.immagine, alt: "", loading: "lazy", decoding: "async", referrerpolicy: "no-referrer" });
     img.addEventListener("error", () => img.remove());
+    // una miniatura (sotto i 400 px) allargata verrebbe sgranata: resta a lato anche con le foto grandi
+    img.addEventListener("load", () => { if (img.naturalWidth < 400) riga.classList.add("foto-piccola"); }, { once: true });
     riga.append(img);
   }
   // parole del glossario che stanno solo nel titolo: diventano etichette sotto
@@ -1741,6 +1754,7 @@ function foglioProfilo(parte) {
   // la lingua dell'app: cambia subito tutto, e il foglio si riapre già tradotto
   const linguaApp = segmenti([["it", "Italiano"], ["en", "English"]], lingua(), (l) => applicaLingua(l, "tu"), { etichetta: L("Lingua dell'app", "App language") });
   const aspetto = segmenti([["auto", L("Automatico", "Automatic")], ["chiaro", L("Chiaro", "Light")], ["scuro", L("Scuro", "Dark")]], sceltaAspetto(), impostaAspetto, { etichetta: L("Aspetto", "Appearance") });
+  const foto = segmenti([["grandi", L("Grandi", "Large")], ["piccole", L("Piccole", "Small")]], sceltaFoto(), impostaFoto, { etichetta: L("Foto delle notizie", "Story photos") });
 
   const bInfo = h("button", { type: "button", class: "riga-link premibile" }, L("Info, fonti e privacy", "About, sources and privacy"), icona("freccia", "freccia"));
   bInfo.addEventListener("click", foglioInfo);
@@ -1767,6 +1781,9 @@ function foglioProfilo(parte) {
       h("div", { class: "gruppo-titolo" }, L("Aspetto", "Appearance")),
       aspetto,
       h("p", { class: "nota stretta" }, L("Automatico segue il chiaro o lo scuro del dispositivo. La scelta vale solo su questo dispositivo.", "Automatic follows your device's light or dark setting. The choice applies to this device only.")),
+      h("div", { class: "gruppo-titolo" }, L("Foto delle notizie", "Story photos")),
+      foto,
+      h("p", { class: "nota stretta" }, L("Grandi: sotto il titolo, larghe quanto la notizia. Piccole: una miniatura a lato, così entrano più notizie nello schermo.", "Large: below the headline, as wide as the story. Small: a thumbnail on the side, so more stories fit on screen.")),
       h("div", { class: "gruppo-titolo" }, L("Notizie da", "News from")),
       h("div", { class: "gruppo" }, PAESI().map(rigaPaese)),
       h("p", { class: "nota stretta" }, L("Le notizie restano nella lingua della testata: quelle di Europa, Stati Uniti e Regno Unito sono in inglese.", "Stories stay in the language they were published in: the Italian ones are in Italian.")),

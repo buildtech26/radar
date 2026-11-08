@@ -116,6 +116,88 @@ def sicuro(url):
     return url if url.startswith("https://") else ""
 
 
+# ---------- foto delle notizie ----------
+# Le schede mostrano la foto grande, sotto il testo (come i link su X): serve una foto per quasi ogni notizia, e
+# non una miniatura. Il feed ne manda una a metà delle notizie, a volte minuscola (BBC 240 px, Guardian 140).
+# Così: si ingrandisce dall'indirizzo quando il sito lo permette (BBC); se manca o è piccola si prende
+# l'immagine di anteprima della pagina dell'articolo (og:image), una volta sola per notizia (cache in
+# immagini.json, che su GitHub passa da un giro all'altro); e si scarta quella che una fonte usa per tante notizie,
+# perché è un logo o un'icona (la BCE dà un microfono a tutte le interviste).
+IMMAGINI = QUI / "immagini.json"
+FOTO_MIN = 400          # sotto questa larghezza (scritta nell'indirizzo) la foto è una miniatura: si cerca la grande
+FOTO_PER_GIRO = 600     # pagine di articoli aperte al massimo per giro (il primo giro ne apre ~420 in 10 s, poi poche)
+FOTO_GENERICA = 3       # la stessa immagine su almeno tante notizie della stessa fonte è un logo
+# …o lo dice il nome del file (la BCE: social-default.jpg, una per tipo di comunicato)
+# (solo a inizio o fine nome: Quanta chiama "…-Default.webp" le sue illustrazioni vere)
+NOME_GENERICO = re.compile(r"/(social[-_])?(default|placeholder|fallback|logo|og[-_]image|share[-_]image)[^/]*$|[-_]logo\.\w+$", re.I)
+
+
+def ingrandisci(url):
+    """La stessa foto più grande, quando il sito lo dice nell'indirizzo. "" se resta una miniatura."""
+    if "ichef.bbci.co.uk" in url:
+        return re.sub(r"/standard/\d+/", "/standard/976/", url)
+    m = re.search(r"[?&](?:w|width)=(\d+)", url)
+    if m and int(m.group(1)) < FOTO_MIN:
+        # Guardian: l'indirizzo è firmato (s=…), cambiare la misura lo rompe. Gli altri (HDblog w=660) sono già grandi.
+        return ""
+    return url
+
+
+def foto_della_pagina(link):
+    """L'immagine di anteprima dell'articolo (og:image, o twitter:image). Legge solo l'inizio della pagina."""
+    with urllib.request.urlopen(urllib.request.Request(link, headers={"User-Agent": UA["User-Agent"], "Accept": "text/html,*/*"}), timeout=8) as r:
+        testa = r.read(400_000).decode(r.headers.get_content_charset() or "utf-8", "replace")
+    testa = testa.split("</head>", 1)[0]
+    for meta in re.findall(r"<meta\b[^>]*>", testa, re.I):
+        nome = re.search(r"(?:property|name)\s*=\s*[\"']?(og:image(?::secure_url|:url)?|twitter:image(?::src)?)[\"'\s>]", meta, re.I)
+        val = re.search(r"content\s*=\s*(?:\"([^\"]*)\"|'([^']*)')", meta, re.I)
+        if nome and val:
+            url = html.unescape(val.group(1) or val.group(2) or "").strip()
+            if url:
+                return sicuro(urllib.parse.urljoin(link, url))
+    return ""
+
+
+def completa_foto(voci):
+    try:
+        cache = json.loads(IMMAGINI.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        cache = {}
+    for v in voci:
+        if v.get("immagine"):
+            v["immagine"] = ingrandisci(v["immagine"])
+    da_cercare = [v for v in voci if not v.get("immagine") and v["id"] not in cache][:FOTO_PER_GIRO]
+
+    def una(v):
+        try:
+            return v["id"], foto_della_pagina(v["link"])
+        except Exception:
+            return v["id"], ""       # pagina chiusa ai programmi, o lenta: resta senza foto (e non si riprova)
+
+    ora = int(time.time())
+    with cf.ThreadPoolExecutor(12) as ex:
+        for i, url in ex.map(una, da_cercare):
+            cache[i] = {"url": url, "quando": ora}
+    for v in voci:
+        if not v.get("immagine") and cache.get(v["id"], {}).get("url"):
+            v["immagine"] = cache[v["id"]]["url"]
+    # loghi e icone: la stessa immagine su tante notizie della stessa fonte
+    conta = {}
+    for v in voci:
+        if v.get("immagine"):
+            conta[(v["fonte"], v["immagine"])] = conta.get((v["fonte"], v["immagine"]), 0) + 1
+    for v in voci:
+        if v.get("immagine") and (conta[(v["fonte"], v["immagine"])] >= FOTO_GENERICA
+                                  or NOME_GENERICO.search(urllib.parse.urlsplit(v["immagine"]).path)):
+            v["immagine"] = ""
+    limite = ora - 10 * 86400      # le notizie restano 7 giorni
+    cache = {k: c for k, c in cache.items() if c.get("quando", 0) > limite}
+    IMMAGINI.write_text(json.dumps(cache, separators=(",", ":")), encoding="utf-8")
+    con = sum(1 for v in voci if v.get("immagine"))
+    print(f"foto: {con} notizie su {len(voci)} ({len(da_cercare)} pagine aperte in questo giro)")
+    return []
+
+
 def leggi_feed(dati, fonte):
     # le entità HTML (&nbsp; …) non sono XML valido: le rendo &amp;… e le scioglie pulisci()
     dati = dati.lstrip(b"\xef\xbb\xbf \t\r\n")   # BOM o righe vuote prima di <?xml (Il Post)
@@ -751,6 +833,7 @@ def raccogli():
     interessi = leggi_json("interessi.json")
     inizio = time.time()
     voci, err_notizie = notizie(interessi["fonti"])
+    err_notizie += completa_foto(voci)
     err_notizie += traduci(voci)
     quote, err_mercati = mercati(interessi["titoli"])
     dati = {

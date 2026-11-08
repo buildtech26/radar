@@ -36,6 +36,12 @@ jobs:
           path: traduzioni.json
           key: traduzioni-${{ github.run_id }}
           restore-keys: traduzioni-
+      # le foto prese dalle pagine degli articoli: ogni pagina si apre una volta sola
+      - uses: actions/cache@v4
+        with:
+          path: immagini.json
+          key: immagini-${{ github.run_id }}
+          restore-keys: immagini-
       - name: Raccogli notizie e prezzi
         run: python raccogli.py
         env:
