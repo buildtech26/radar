@@ -384,14 +384,14 @@ h3.giorno {
 }
 .card.letta h3 { color: var(--testo-2); }
 .card.letta .thumb { opacity: 0.6; }
-/* foto grandi (predefinite, Tu → Foto delle notizie): sotto il testo, larghe quanto la scheda, in 16:9, come i
-   link su X. Le miniature vere (sotto i 400 px, .foto-piccola) restano a lato per non sgranarsi */
-:root:not([data-foto="piccole"]) .card-riga:not(.foto-piccola) { flex-direction: column; align-items: stretch; gap: 0.75rem; }
-:root:not([data-foto="piccole"]) .card-riga:not(.foto-piccola) .thumb {
+/* foto grandi: sotto il testo, larghe quanto la scheda, in 16:9, come i link su X (scelto da Mattia l'08/11/2026,
+   senza la scelta piccole/grandi). Le miniature vere (sotto i 400 px, .foto-piccola) restano a lato per non sgranarsi */
+.card-riga:not(.foto-piccola) { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+.card-riga:not(.foto-piccola) .thumb {
   width: 100%; max-width: 100%; height: auto; aspect-ratio: 16 / 9;
   border-radius: 1rem; box-shadow: 0 0 0 0.5px var(--sep);
 }
-:root:not([data-foto="piccole"]) .card-riga:not(.foto-piccola) p.sommario { -webkit-line-clamp: 2; }
+.card-riga:not(.foto-piccola) p.sommario { -webkit-line-clamp: 2; }
 
 .temi { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: 0.625rem; position: relative; z-index: 1; }
 .tema, .parola {

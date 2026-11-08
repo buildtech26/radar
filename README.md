@@ -150,8 +150,8 @@ o fornitori, va aggiornata insieme alla data in cima e al riassunto in Info (`fo
 
 ## Foto delle notizie
 
-Le schede mostrano la foto grande sotto il testo, in 16:9, come i link su X (Tu → Foto delle notizie: Grandi o
-Piccole, per dispositivo, `radar.foto`). Una foto sotto i 400 px resta miniatura a lato anche con Grandi.
+Le schede mostrano la foto grande sotto il testo, in 16:9, come i link su X (sempre: la scelta Grandi/Piccole
+l'08/11/2026 Mattia l'ha voluta togliere). Una foto sotto i 400 px resta miniatura a lato, per non sgranarsi.
 Le trova `completa_foto()` in `raccogli.py`: quella del feed; ingrandita dall'indirizzo quando si può (BBC
 240 → 976); se manca o è piccola (Guardian 140, firmato), l'og:image della pagina dell'articolo, aperta una volta
 sola per notizia (`immagini.json`, su GitHub nella cache di Actions). Si scartano loghi e icone: la stessa immagine
