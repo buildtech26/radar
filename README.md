@@ -158,6 +158,15 @@ sola per notizia (`immagini.json`, su GitHub nella cache di Actions). Si scartan
 su 3+ notizie della stessa fonte, o un nome come `social-default`, `logo_…`. L'08/11/2026: 626 notizie su 676
 con la foto (prima 335); senza restano FT (pagine chiuse), Bank of England, ESA, Simon Willison e poche altre.
 
+## Storie Instagram
+
+`py storie_ig.py` disegna la storia del giro (mattina prima delle 11, pranzo prima delle 17, poi sera; o
+`--giro mattina|pranzo|sera`) in `storie/AAAA-MM-GG-giro/`: PNG 1080×1920 fotografati con Chrome senza finestra,
+più `notizie.txt` con titoli e link da controllare. Mattina: copertina + la notizia migliore di ogni sezione + link;
+pranzo e sera: 2–3 notizie nuove (se sono meno di 2 il giro salta), la sera col link. Le notizie usate stanno in
+`storie/usate.json` e non tornano nello stesso giorno (`--prova` non le segna). Testi delle testate (tradotti
+se inglesi) con la fonte, niente AI, niente foto dei giornali, niente prezzi. Pubblicazione: ancora da collegare.
+
 ## Traduzioni
 
 Per l'app in italiano, le notizie inglesi hanno titolo e "In breve" tradotti (solo nella notizia aperta; le schede
