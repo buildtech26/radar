@@ -1389,12 +1389,9 @@ function quantoManca(t) {
 }
 
 function vistaPerTe() {
-  const ora = new Date();
-  const hh = ora.getHours();
-  const saluto = hh < 5 ? L("Buonanotte", "Good night") : hh < 13 ? L("Buongiorno", "Good morning") : hh < 18 ? L("Buon pomeriggio", "Good afternoon") : L("Buonasera", "Good evening");
-  const sotto = h("span", {}, h("span", { class: "data" }, data(ora, { weekday: "long", day: "numeric", month: "long" })), ` · ${L("aggiornato", "updated")} ${quandoFrase(S.dati.aggiornato)}`);
-  const nome = S.profilo.nome.trim();
-  const parti = [intestazione(nome ? `${saluto}, ${nome}` : saluto, sotto)];
+  // niente saluto, nome, data e "aggiornato" in cima (scelto da Mattia l'08/11/2026): si parte dalle storie.
+  // Il titolo resta solo per i lettori di schermo.
+  const parti = [h("h1", { class: "sr" }, L("Per te", "For you"))];
   const storie = strisciaStorie();
   if (storie) parti.push(storie);
   if (Date.now() - S.dati.aggiornato > 3 * 36e5) parti.push(h("div", { class: "banner" }, L("L'aggiornamento automatico è in ritardo: le notizie nuove arrivano appena riparte.", "Automatic updates are running late: new stories will arrive as soon as they resume.")));
@@ -2522,7 +2519,7 @@ function disegna({ nuova = false } = {}) {
   if (h1) {
     osservatore = new IntersectionObserver(([v]) => $("#barra").classList.toggle("compatta", !v.isIntersecting), { rootMargin: "-48px 0px 0px 0px" });
     osservatore.observe(h1);
-  }
+  } else $("#barra").classList.remove("compatta");   // Per te non ha il titolo grande
   suggerisciScorrimento();
 }
 

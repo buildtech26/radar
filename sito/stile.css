@@ -508,7 +508,7 @@ a.bottone-primario { display: flex; align-items: center; justify-content: center
 .storie {
   display: flex; gap: 0.6875rem;
   overflow-x: auto; scrollbar-width: none;
-  margin: -0.25rem -1rem 0.75rem; padding: 0.25rem 1rem 0.25rem;
+  margin: 0.25rem -1rem 0.75rem; padding: 0.25rem 1rem 0.25rem;
 }
 .storie::-webkit-scrollbar { display: none; }
 /* al centro; i margini automatici (e non justify-content: center) lasciano raggiungibile il primo cerchio quando la fila scorre */
