@@ -1,4 +1,4 @@
-"""Scarica i loghi delle fonti del Radar in sito/loghi/ (64x64 PNG), una volta sola.
+"""Scarica i loghi delle fonti di Nodus in sito/loghi/ (64x64 PNG), una volta sola.
 
     py loghi.py            scarica solo i loghi che mancano
     py loghi.py --tutti    li riscarica tutti

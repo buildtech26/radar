@@ -1,4 +1,4 @@
--- Radar · database degli utenti (Supabase)
+-- Nodus · database degli utenti (Supabase)
 -- Da incollare una volta sola in Supabase → SQL Editor → New query → Run.
 -- Ogni utente ha UNA riga con le sue scelte; può leggere e scrivere SOLO la sua (Row Level Security).
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Radar · storie Instagram: sceglie le notizie da sito/dati.json e disegna le schermate (PNG 1080×1920).
+"""Nodus · storie Instagram: sceglie le notizie da sito/dati.json e disegna le schermate (PNG 1080×1920).
 
     py storie_ig.py                 il giro dell'ora: mattina (prima delle 11), pranzo (prima delle 17), sera
     py storie_ig.py --giro pranzo   un giro preciso
     py storie_ig.py --prova         non segna le notizie come usate (per provare)
 
 Tre giri al giorno, decisi da Mattia l'08/11/2026:
-  mattina 7:30  copertina + la notizia migliore di ogni sezione + schermata col link a Radar
+  mattina 7:30  copertina + la notizia migliore di ogni sezione + schermata col link a Nodus
   pranzo 13:00  2–3 notizie uscite dopo le 7:00, mai già usate oggi (niente link)
   sera   19:30  2–3 notizie uscite dopo le 12:30, mai già usate oggi + schermata col link
 Se a pranzo o la sera ci sono meno di 2 notizie buone, il giro salta.
@@ -20,6 +20,7 @@ Il testo delle notizie arriva da siti esterni: nell'HTML va sempre con html.esca
 import argparse
 import html
 import json
+import math
 import os
 import re
 import shutil
@@ -150,9 +151,35 @@ def icona(sezione, lato):
             f'stroke-linecap="round" stroke-linejoin="round">{tracce}</svg></div></div>')
 
 
-MARCHIO = ('<span class="marchio"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" '
-           'stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/>'
-           '<path d="M12 12l6.4-6.4"/></svg>Radar</span>')
+def nodo(lato, fondo="#000"):
+    """Il logo di Nodus (scelto da Mattia il 09/11/2026): un nodo a trifoglio a tre colori (finanza, economia, AI)
+    con gli incroci sopra/sotto alternati. Il pezzo che passa sopra è ridisegnato con un bordo del colore del
+    fondo, che fa da stacco; i cambi di colore cadono sotto un incrocio, così non si vedono. È lo stesso di
+    sito/icona.svg."""
+    N, k = 720, 26
+    sopra, sotto = (31, 271, 511), (208, 448, 688)   # indici dei punti dove il filo passa sopra / sotto
+    colori = ("#30D158", "#FF9F0A", "#7D7AFF")
+    pts = []
+    for i in range(N):
+        t = 2 * math.pi * i / N
+        pts.append((50 + 12.4 * (math.sin(t) + 2 * math.sin(2 * t)), 52 - 12.4 * (math.cos(t) - 2 * math.cos(2 * t))))
+
+    def tratto(da, a):
+        return "M" + " L".join(f"{pts[i % N][0]:.1f} {pts[i % N][1]:.1f}" for i in range(da, a + 1))
+
+    def colore_di(s):
+        return next(colori[c] for c in range(3)
+                    if (sotto[c] <= s < sotto[(c + 1) % 3]) or (c == 2 and (s >= sotto[2] or s < sotto[0])))
+
+    parti = [f'<path d="{tratto(sotto[c], sotto[(c + 1) % 3] + (N if c == 2 else 0))}" stroke="{colori[c]}"/>' for c in range(3)]
+    for i in sopra:
+        parti.append(f'<path d="{tratto(i - k, i + k)}" stroke="{fondo}" stroke-width="14.9" stroke-linecap="butt"/>')
+        parti.append(f'<path d="{tratto(i - k - 1, i + k + 1)}" stroke="{colore_di(i)}"/>')
+    return (f'<svg width="{lato}" height="{lato}" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" '
+            f'stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">{"".join(parti)}</g></svg>')
+
+
+MARCHIO = f'<span class="marchio">{nodo(44)}Nodus</span>'
 
 STILE = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=block');
@@ -222,12 +249,12 @@ def schermata(c, i, quante, etichetta, loghi):
 
 def chiusura():
     return pagina(f'<div class="testa">{MARCHIO}</div>'
-                  '<h2 style="margin-top:140px;font-size:132px;line-height:.98;letter-spacing:-.045em">Le altre le trovi su Radar</h2>'
+                  '<h2 style="margin-top:140px;font-size:132px;line-height:.98;letter-spacing:-.045em">Le altre le trovi su Nodus</h2>'
                   '<p class="testo" style="font-size:42px">Ogni ora le notizie di finanza, economia, AI, tecnologia e scienza. '
                   'In cima quelle sui temi che scegli tu, e le parole difficili spiegate semplici.</p>'
-                  '<div class="link"><div class="posto">[qui l\'adesivo link a Radar]</div>'
+                  '<div class="link"><div class="posto">[qui l\'adesivo link a Nodus]</div>'
                   '<span style="font-size:34px;font-weight:600">È gratis</span></div>'
-                  '<p class="nota">Radar serve a informarti: non è consulenza finanziaria.</p>')
+                  '<p class="nota">Nodus serve a informarti: non è consulenza finanziaria.</p>')
 
 
 def chrome():

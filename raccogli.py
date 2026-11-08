@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Radar: raccoglie notizie (RSS) e quotazioni, e scrive sito/dati.json per la pagina.
+"""Nodus: raccoglie notizie (RSS) e quotazioni, e scrive sito/dati.json per la pagina.
 
     py raccogli.py            scarica tutto e scrive sito/dati.json
     py raccogli.py --servi    poi apre la pagina su http://127.0.0.1:8770 (sul PC) e la rende visibile
@@ -767,7 +767,7 @@ def traduci(voci):
 
 # ---------- loghi delle fonti ----------
 # I loghi stanno in sito/loghi/ (li scarica una volta loghi.py) e l'app li mostra accanto al nome della fonte.
-# Sono file del sito: chi apre il Radar non chiede niente a Google o ai giornali.
+# Sono file del sito: chi apre Nodus non chiede niente a Google o ai giornali.
 
 LOGHI = SITO / "loghi"
 # Il sito di una fonte, quando il feed sta su un indirizzo diverso da quello del giornale
@@ -871,7 +871,7 @@ def indirizzi_casa():
 
 
 def gia_acceso():
-    """Vero se qualcuno risponde già sulla porta del Radar (per esempio la copia nascosta partita con Windows)."""
+    """Vero se qualcuno risponde già sulla porta di Nodus (per esempio la copia nascosta partita con Windows)."""
     try:
         with socket.create_connection(("127.0.0.1", PORTA), timeout=1):
             return True
@@ -896,7 +896,7 @@ def servi(apri=True, gestore=Gestore):
     # Ascolta anche sulla rete di casa, così il telefono sullo stesso Wi-Fi lo apre. Serve solo la cartella sito/.
     server = ThreadingHTTPServer(("0.0.0.0", PORTA), partial(gestore, directory=str(SITO)))
     url = f"http://127.0.0.1:{PORTA}/"
-    print(f"Radar su {url} (chiudi la finestra per fermarlo)")
+    print(f"Nodus su {url} (chiudi la finestra per fermarlo)")
     for ip in indirizzi_casa():
         print(f"Dal telefono, sullo stesso Wi-Fi: http://{ip}:{PORTA}/")
     if apri:
@@ -930,7 +930,7 @@ if __name__ == "__main__":
     p.add_argument("--nascosto", action="store_true", help="senza finestra: serve la pagina e riscarica ogni ora")
     a = p.parse_args()
     if gia_acceso():
-        # Il Radar gira già (di solito quello nascosto): basta aprire la pagina, non serve un secondo server.
+        # Nodus gira già (di solito quello nascosto): basta aprire la pagina, non serve un secondo server.
         if a.servi:
             webbrowser.open(f"http://127.0.0.1:{PORTA}/")
         if a.servi or a.nascosto:

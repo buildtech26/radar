@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Radar: manda le notifiche. Gira su GitHub Actions dopo raccogli.py e la pubblicazione (vedi pubblica.yml).
+"""Nodus: manda le notifiche. Gira su GitHub Actions dopo raccogli.py e la pubblicazione (vedi pubblica.yml).
 
     python notifica.py                       manda davvero (servono le chiavi qui sotto)
     python notifica.py --prova FILE.json     non manda niente: legge iscrizioni, profili e registro da FILE.json
@@ -8,7 +8,7 @@
 
 Chi riceve cosa (scelto da Mattia il 07/11/2026):
 - solo chi ha l'account e ha acceso l'interruttore su almeno un dispositivo (tabella iscrizioni);
-- per ogni sezione al massimo un tema, scelto in Il tuo Radar → Notifiche (profilo.notifiche = {sezione: tema});
+- per ogni sezione al massimo un tema, scelto in Il tuo Nodus → Notifiche (profilo.notifiche = {sezione: tema});
 - una notizia vale se ha il tema nel titolo (anche in quello tradotto), è di una sezione e di un paese che la
   persona vede, ed è uscita dall'ultimo giro (3 ore di margine; al primo giro del mattino, dalle 21 della sera prima);
 - un fatto ripreso da più testate conta una volta; più notizie sullo stesso tema nello stesso giro = una notifica;
@@ -230,7 +230,7 @@ NOMI_SEZIONI = {"finanza": ("Finanza", "Finance"), "economia": ("Economia", "Eco
 
 def messaggio(tema, n, altre, lingua):
     """Sezione · tema, e sotto solo la notizia (deciso da Mattia il 07/11/2026: niente testata).
-    Il "from Radar" sotto lo aggiunge iOS da solo e non si può togliere. `altre` resta per il registro."""
+    Il "from Nodus" sotto lo aggiunge iOS da solo e non si può togliere. `altre` resta per il registro."""
     sezione = NOMI_SEZIONI.get(tema["gruppo"], ("", ""))[1 if lingua == "en" else 0]
     nome = nome_tema(tema, lingua)
     return {

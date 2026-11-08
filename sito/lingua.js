@@ -1,4 +1,4 @@
-// Radar · la lingua dell'app: italiano o inglese. Le notizie restano nella lingua della testata.
+// Nodus · la lingua dell'app: italiano o inglese. Le notizie restano nella lingua della testata.
 // Nel codice ogni testo ha le due versioni una accanto all'altra: L("Salvate", "Saved").
 // La prima volta decide il browser (italiano se tra le lingue preferite c'è l'italiano, altrimenti inglese);
 // poi vale la scelta salvata nel profilo (campo "interfaccia"), che con l'account segue l'utente.

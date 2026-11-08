@@ -1,4 +1,4 @@
-// Radar · logica della pagina.
+// Nodus · logica della pagina.
 // I testi delle notizie arrivano da siti esterni: vanno sempre nel DOM come testo (textContent), mai come HTML.
 
 import * as conto from "./conto.js";
@@ -130,7 +130,7 @@ function velocitaDa(storia, adesso) {
 }
 
 // ---------------------------------------------------------------- profilo dell'utente
-// Tutto quello che rende il Radar "tuo": nome, temi, mercati, paesi. Resta su questo dispositivo e, con
+// Tutto quello che rende Nodus "tuo": nome, temi, mercati, paesi. Resta su questo dispositivo e, con
 // l'account, si sincronizza così com'è (è un oggetto solo).
 //   temi: { id: peso 1-3 } oppure null = non ancora scelti (valgono i temi proposti)
 //   mercati: [simboli] oppure null = non ancora scelti (valgono i mercati proposti)
@@ -786,7 +786,7 @@ function scheda(n, { temi = [], compatta = false, inSalvate = false } = {}) {
 }
 
 // ---------------------------------------------------------------- la notizia, nel foglio
-// Toccando una scheda sale il foglio dal basso (lo stesso del glossario e di Il tuo Radar). Dentro, aperto c'è solo
+// Toccando una scheda sale il foglio dal basso (lo stesso del glossario e di Il tuo Nodus). Dentro, aperto c'è solo
 // "In breve" (il testo della testata); Parole da sapere, Perché la vedi e Ne parlano anche sono tendine chiuse, con
 // un'anteprima di cosa c'è dentro. In fondo: l'articolo intero sul sito del giornale, Salva e Condividi.
 // (Il 06/11/2026 è stata provata anche una pagina intera che entra da destra: a Mattia piace di più il foglio.)
@@ -906,7 +906,7 @@ function apriNotizia(n, art) {
     try { await navigator.clipboard.writeText(n.link); mostraAvviso(L("Link copiato", "Link copied")); } catch { mostraAvviso(L("Non riesco a copiare il link", "Couldn't copy the link")); }
   });
   box.append(h("div", { class: "notizia-azioni" }, leggi, h("div", { class: "riga-due" }, bSalva, bCondividi)),
-    h("p", { class: "nota" }, L(`Il testo è di ${n.fonte}: Radar non riscrive le notizie.`, `The text is by ${n.fonte}: Radar doesn't rewrite the news.`)));
+    h("p", { class: "nota" }, L(`Il testo è di ${n.fonte}: Nodus non riscrive le notizie.`, `The text is by ${n.fonte}: Nodus doesn't rewrite the news.`)));
 
   apriFoglio(SEZIONI()[n.sezione] || L("Notizia", "Story"), box);
   F.ritorno = () => apriNotizia(n, art);   // dal glossario si torna qui
@@ -1556,7 +1556,7 @@ function vistaSalvate() {
   }
   parti.push(h("p", { class: "nota" }, conto.utente()
     ? L("Salvate e lette sono sincronizzate con il tuo account: le ritrovi su tutti i dispositivi.", "Saved and read stories are synced with your account: you'll find them on all your devices.")
-    : L("Salvate e lette restano su questo dispositivo. Con un account (da Il tuo Radar → Tu) le ritrovi anche sugli altri.", "Saved and read stories stay on this device. With an account (from Your Radar → You) you'll find them on your other devices too.")));
+    : L("Salvate e lette restano su questo dispositivo. Con un account (da Il tuo Nodus → Tu) le ritrovi anche sugli altri.", "Saved and read stories stay on this device. With an account (from Your Nodus → You) you'll find them on your other devices too.")));
   return parti;
 }
 
@@ -1612,7 +1612,7 @@ function foglioGlossario() {
   apriFoglio(L("Glossario", "Glossary"), h("div", {}, h("label", { class: "cerca" }, icona("lente"), input), lista));
 }
 
-// pastiglia da accendere e spegnere: la stessa nella presentazione e in Il tuo Radar
+// pastiglia da accendere e spegnere: la stessa nella presentazione e in Il tuo Nodus
 function pastiglia(testo, acceso, alCambio) {
   const b = h("button", { type: "button", class: "scelta premibile", "aria-pressed": String(acceso) }, icona("spunta", "spunta"), testo);
   b.addEventListener("click", () => {
@@ -1630,7 +1630,7 @@ function interruttore(nome, acceso, alCambio) {
   return h("label", { class: "interruttore" }, input, h("span", { class: "binario" }));
 }
 
-// "Il tuo Radar": nome, temi, mercati (con la stella per quello in evidenza), lingue. parte = "temi" | "mercati" per aprirlo lì.
+// "Il tuo Nodus": nome, temi, mercati (con la stella per quello in evidenza), lingue. parte = "temi" | "mercati" per aprirlo lì.
 function foglioProfilo(parte) {
   let cambiato = false;
   const segna = () => { cambiato = true; };
@@ -1777,7 +1777,7 @@ function foglioProfilo(parte) {
   const iniziale = pannelli[parte] ? parte : "temi";
   const scelta = segmenti([["temi", L("Temi", "Topics")], ["mercati", L("Mercati", "Markets")], ["notifiche", L("Notifiche", "Alerts")], ["tu", L("Tu", "You")]], iniziale, mostraParte, { etichetta: L("Parte", "Section") });
   mostraParte(iniziale);
-  apriFoglio(L("Il tuo Radar", "Your Radar"), h("div", {}, h("div", { class: "segmenti-fissi" }, scelta), area), () => { if (cambiato) disegna(); });
+  apriFoglio(L("Il tuo Nodus", "Your Nodus"), h("div", {}, h("div", { class: "segmenti-fissi" }, scelta), area), () => { if (cambiato) disegna(); });
 }
 
 // ---------------------------------------------------------------- notifiche
@@ -1813,7 +1813,7 @@ async function attivaNotifiche() {
   const permesso = await Notification.requestPermission();
   if (permesso !== "granted") {
     throw new Error(permesso === "denied"
-      ? L("Le notifiche sono bloccate per il Radar: si riattivano dalle impostazioni del dispositivo.", "Notifications are blocked for Radar: turn them back on in your device settings.")
+      ? L("Le notifiche sono bloccate per Nodus: si riattivano dalle impostazioni del dispositivo.", "Notifications are blocked for Nodus: turn them back on in your device settings.")
       : L("Notifiche non attivate.", "Notifications not turned on."));
   }
   const reg = await navigator.serviceWorker.ready;
@@ -1849,7 +1849,7 @@ function pannelloNotifiche(vaiATu) {
       return;
     }
     if (PUSH.ios && !PUSH.dallaHome) {
-      stato.replaceChildren(h("p", { class: "nota stretta" }, L("Su iPhone e iPad le notifiche arrivano solo al Radar aggiunto alla schermata Home: in Safari tocca Condividi → Aggiungi alla schermata Home, poi apri il Radar da lì. Serve iOS 16.4 o più recente.", "On iPhone and iPad, alerts only reach Radar added to the Home Screen: in Safari tap Share → Add to Home Screen, then open Radar from there. iOS 16.4 or later is needed.")));
+      stato.replaceChildren(h("p", { class: "nota stretta" }, L("Su iPhone e iPad le notifiche arrivano solo a Nodus aggiunto alla schermata Home: in Safari tocca Condividi → Aggiungi alla schermata Home, poi apri Nodus da lì. Serve iOS 16.4 o più recente.", "On iPhone and iPad, alerts only reach Nodus added to the Home Screen: in Safari tap Share → Add to Home Screen, then open Nodus from there. iOS 16.4 or later is needed.")));
       return;
     }
     if (!PUSH.supportate) {
@@ -1881,7 +1881,7 @@ function pannelloNotifiche(vaiATu) {
     if (bloccate) sw.querySelector("input").disabled = true;
     stato.replaceChildren(
       h("div", { class: "gruppo" }, h("div", { class: "riga-tema" }, h("div", { class: "info" }, h("div", { class: "nome" }, L("Su questo dispositivo", "On this device"))), sw)),
-      bloccate ? h("p", { class: "nota stretta" }, L("Le hai bloccate per il Radar: si riattivano dalle impostazioni del browser (su iPhone: Impostazioni → Notifiche → Radar).", "You've blocked them for Radar: turn them back on in your browser settings (on iPhone: Settings → Notifications → Radar).")) : null);
+      bloccate ? h("p", { class: "nota stretta" }, L("Le hai bloccate per Nodus: si riattivano dalle impostazioni del browser (su iPhone: Impostazioni → Notifiche → Nodus).", "You've blocked them for Nodus: turn them back on in your browser settings (on iPhone: Settings → Notifications → Nodus).")) : null);
   };
   disegnaStato();
 
@@ -1906,14 +1906,14 @@ function pannelloNotifiche(vaiATu) {
     h("div", { class: "gruppo-titolo" }, L("Un tema per sezione", "One topic per section")),
     h("div", { class: "gruppo" }, righe),
     h("p", { class: "nota stretta" }, L("Ti avvisiamo quando esce una notizia con quel tema nel titolo. Al massimo 2 notifiche al giorno per tema e 5 in tutto, solo dalle 8 alle 22: quelle della notte arrivano alle 8. Se nella stessa ora escono più notizie sullo stesso tema, arrivano in una notifica sola.", "We'll alert you when a story has that topic in its headline. At most 2 alerts a day per topic and 5 in total, only from 8 am to 10 pm (Italian time): overnight ones arrive at 8. If several stories on the same topic come out in the same hour, they arrive as one alert.")),
-    h("p", { class: "nota stretta" }, L("Il Radar guarda le notizie nuove una volta all'ora, quindi una notifica può arrivare fino a un'ora dopo. I temi valgono per tutti i tuoi dispositivi, l'interruttore solo per questo.", "Radar checks for new stories once an hour, so an alert can arrive up to an hour later. Topics apply to all your devices, the switch only to this one.")));
+    h("p", { class: "nota stretta" }, L("Nodus guarda le notizie nuove una volta all'ora, quindi una notifica può arrivare fino a un'ora dopo. I temi valgono per tutti i tuoi dispositivi, l'interruttore solo per questo.", "Nodus checks for new stories once an hour, so an alert can arrive up to an hour later. Topics apply to all your devices, the switch only to this one.")));
 }
 const scelteNotifiche = () => Object.values(S.profilo.notifiche || {}).filter(Boolean);
 
 // dalla notifica: #notizia=<id>. Si apre la sottopagina sopra la vista di prima; se la notizia non c'è più, si dice
 function apriDaNotifica(id) {
   const n = visibili().find((x) => conAltre(x).some((y) => y.id === id)) || S.dati.notizie.find((x) => x.id === id) || S.salvate.find((x) => x.id === id);
-  if (!n) { mostraAvviso(L("Questa notizia non è più nel Radar", "This story is no longer in Radar")); return; }
+  if (!n) { mostraAvviso(L("Questa notizia non è più in Nodus", "This story is no longer in Nodus")); return; }
   apriNotizia(n, document.querySelector(`.card[data-id="${CSS.escape(n.id)}"]`));
 }
 navigator.serviceWorker?.addEventListener("message", (e) => {
@@ -1944,7 +1944,7 @@ function foglioInfo() {
   const informativa = h("a", { href: L("privacy.html", "privacy-en.html"), target: "_blank" }, L("informativa completa", "full privacy notice"));
   // un ramo solo (non L): i link e l'elenco delle fonti sono nodi, e finirebbero spostati nella versione scartata
   apriFoglio(L("Info", "About"), h("div", { class: "testo-info" }, ...(lingua() === "it" ? [
-    h("p", {}, "Radar raccoglie ogni ora le notizie di finanza, economia, intelligenza artificiale, tecnologia e scienza da testate italiane e straniere, e mette in cima quelle sui temi che hai scelto. Accanto ci sono i mercati che segui, l'agenda degli appuntamenti che muovono i prezzi e un glossario per le parole difficili."),
+    h("p", {}, "Nodus raccoglie ogni ora le notizie di finanza, economia, intelligenza artificiale, tecnologia e scienza da testate italiane e straniere, e mette in cima quelle sui temi che hai scelto. Accanto ci sono i mercati che segui, l'agenda degli appuntamenti che muovono i prezzi e un glossario per le parole difficili."),
     h("h3", {}, "Non è consulenza finanziaria"),
     h("p", {}, "Notizie, prezzi, grafici e glossario servono a informarti, non a dirti cosa comprare o vendere. Prima di investire valuta la tua situazione e, se serve, chiedi a un consulente abilitato. Chi investe può perdere anche parte di quello che ha messo."),
     h("h3", {}, "Da dove arrivano i contenuti"),
@@ -1955,11 +1955,11 @@ function foglioInfo() {
     h("p", {}, "Le date dell'agenda vengono dalle pagine ufficiali di BCE, Fed, Eurostat e delle aziende."),
     h("h3", {}, "Privacy"),
     h("p", {}, "Non ci sono pubblicità né cookie di profilazione, e l'app non registra statistiche su cosa leggi. Senza account, nome, temi, mercati e salvate restano solo in questo browser."),
-    h("p", {}, "L'account è facoltativo. Se lo crei conserviamo la tua email e le tue scelte (nome, temi, mercati, salvate, lette e nascoste; se accendi le notifiche, anche l'indirizzo del dispositivo per riceverle e quelle già inviate) su Supabase, in un server in Germania, solo per fartele ritrovare sugli altri dispositivi. Puoi scaricarle o eliminare l'account in ogni momento da Il tuo Radar → Tu."),
+    h("p", {}, "L'account è facoltativo. Se lo crei conserviamo la tua email e le tue scelte (nome, temi, mercati, salvate, lette e nascoste; se accendi le notifiche, anche l'indirizzo del dispositivo per riceverle e quelle già inviate) su Supabase, in un server in Germania, solo per fartele ritrovare sugli altri dispositivi. Puoi scaricarle o eliminare l'account in ogni momento da Il tuo Nodus → Tu."),
     h("p", {}, "Il sito, come ogni sito, riceve dal tuo browser dati tecnici come l'indirizzo IP; le immagini delle notizie arrivano direttamente dai siti delle testate."),
     h("p", {}, "Tutti i dettagli (chi è il titolare, i fornitori, per quanto teniamo i dati, i tuoi diritti) sono nell'", informativa, "."),
   ] : [
-    h("p", {}, "Every hour, Radar collects finance, economy, artificial intelligence, technology and science news from Italian and international outlets, and puts the stories on the topics you chose at the top. Alongside are the markets you follow, a calendar of the events that move prices, and a glossary for the tricky words."),
+    h("p", {}, "Every hour, Nodus collects finance, economy, artificial intelligence, technology and science news from Italian and international outlets, and puts the stories on the topics you chose at the top. Alongside are the markets you follow, a calendar of the events that move prices, and a glossary for the tricky words."),
     h("h3", {}, "This is not financial advice"),
     h("p", {}, "News, prices, charts and the glossary are there to inform you, not to tell you what to buy or sell. Before investing, consider your own situation and, if needed, talk to a licensed adviser. Investing can mean losing part of what you put in."),
     h("h3", {}, "Where the content comes from"),
@@ -1970,7 +1970,7 @@ function foglioInfo() {
     h("p", {}, "Calendar dates come from the official pages of the ECB, the Fed, Eurostat and the companies."),
     h("h3", {}, "Privacy"),
     h("p", {}, "There are no ads and no profiling cookies, and the app keeps no statistics on what you read. Without an account, your name, topics, markets and saved stories stay in this browser only."),
-    h("p", {}, "The account is optional. If you create one, we store your email and your choices (name, topics, markets, saved, read and hidden stories; if you turn alerts on, also your device's address for receiving them and the alerts already sent) on Supabase, on a server in Germany, only so you can find them on your other devices. You can download them or delete the account at any time from Your Radar → You."),
+    h("p", {}, "The account is optional. If you create one, we store your email and your choices (name, topics, markets, saved, read and hidden stories; if you turn alerts on, also your device's address for receiving them and the alerts already sent) on Supabase, on a server in Germany, only so you can find them on your other devices. You can download them or delete the account at any time from Your Nodus → You."),
     h("p", {}, "Like any website, the site receives technical data from your browser, such as your IP address; news images load directly from the outlets' sites."),
     h("p", {}, "All the details (who the data controller is, the providers, how long we keep data, your rights) are in the ", informativa, "."),
   ]), cancella));
@@ -2017,15 +2017,15 @@ function benvenuto() {
       const giaConto = h("button", { type: "button", class: "bottone-testo premibile" }, L("Ho già un account", "I already have an account"));
       giaConto.addEventListener("click", mostraAccesso);
       return {
-        titolo: L("Benvenuto in Radar", "Welcome to Radar"),
+        titolo: L("Benvenuto in Nodus", "Welcome to Nodus"),
         testo: L("Finanza, economia, AI, tecnologia e scienza: ogni ora le notizie che contano, e in cima quelle sui temi che scegli tu.", "Finance, the economy, AI, tech and science: the news that matters, every hour, with the topics you choose at the top."),
-        sopra: h("div", { class: "bv-logo", "aria-hidden": "true" }, icona("radar")),
+        sopra: h("img", { class: "bv-logo", src: "icona.svg", alt: "" }),
         contenuto: h("div", {},
           h("div", { class: "bv-punti" },
             punto(L("Per te", "For you"), L("Le notizie sui tuoi temi, prima di tutto il resto.", "Stories on your topics, before everything else.")),
             punto(L("Mercati", "Markets"), L("Gli indici, gli ETF, le azioni e le cripto che decidi di seguire.", "The indices, ETFs, stocks and crypto you choose to follow.")),
             punto(L("Glossario", "Glossary"), L("Tocca una parola sottolineata e te la spieghiamo in parole semplici.", "Tap an underlined word and we explain it in plain language."))),
-          h("p", { class: "bv-nota" }, L("Radar serve a informarti: non è consulenza finanziaria.", "Radar is here to inform you: it is not financial advice."))),
+          h("p", { class: "bv-nota" }, L("Nodus serve a informarti: non è consulenza finanziaria.", "Nodus is here to inform you: it is not financial advice."))),
         avanti: L("Inizia", "Get started"),
         secondario: h("div", { class: "riga-bottoni centrati" }, conto.utente() ? null : giaConto, salta),
       };
@@ -2040,7 +2040,7 @@ function benvenuto() {
       if (!scelta.paesiToccati) scelta.paesi = new Set(paesiScelti());
       return {
         titolo: L("Da dove vuoi le notizie?", "Where do you want your news from?"),
-        testo: L("Scegli i paesi delle testate. Potrai cambiarli quando vuoi, in Il tuo Radar → Tu.", "Pick the countries of the news outlets. You can change them any time, in Your Radar → You."),
+        testo: L("Scegli i paesi delle testate. Potrai cambiarli quando vuoi, in Il tuo Nodus → Tu.", "Pick the countries of the news outlets. You can change them any time, in Your Nodus → You."),
         contenuto: h("div", {},
           h("div", { class: "scelte" }, PAESI().map(([k, nome]) =>
             sceltaMultipla(nome, scelta.paesi.has(k), (on) => { scelta.paesiToccati = true; on ? scelta.paesi.add(k) : scelta.paesi.delete(k); aggiornaBottone(); }))),
@@ -2052,7 +2052,7 @@ function benvenuto() {
     },
     () => ({
       titolo: L("Quali notizie vuoi?", "Which news do you want?"),
-      testo: L("Scegli le sezioni. Quelle che lasci spente non le vedrai, né in Notizie né in Per te. Potrai cambiarle quando vuoi, in Il tuo Radar → Temi.", "Pick the sections. The ones you leave off won't show up, in News or in For you. You can change them any time, in Your Radar → Topics."),
+      testo: L("Scegli le sezioni. Quelle che lasci spente non le vedrai, né in Notizie né in Per te. Potrai cambiarle quando vuoi, in Il tuo Nodus → Temi.", "Pick the sections. The ones you leave off won't show up, in News or in For you. You can change them any time, in Your Nodus → Topics."),
       contenuto: h("div", { class: "scelte" }, Object.entries(GRUPPI_TEMI()).map(([k, nome]) =>
         sceltaMultipla(nome, scelta.sezioni.has(k), (on) => { on ? scelta.sezioni.add(k) : scelta.sezioni.delete(k); aggiornaBottone(); }))),
       avanti: L("Continua", "Continue"),
@@ -2116,7 +2116,7 @@ function benvenuto() {
     let destra = h("span", { class: "bv-spazio" });
     if (!passo) {
       const altra = lingua() === "it" ? "en" : "it";
-      destra = h("button", { type: "button", class: "bv-lingua premibile", lang: altra, "aria-label": altra === "en" ? "Use Radar in English" : "Usa Radar in italiano" }, altra.toUpperCase());
+      destra = h("button", { type: "button", class: "bv-lingua premibile", lang: altra, "aria-label": altra === "en" ? "Use Nodus in English" : "Usa Nodus in italiano" }, altra.toUpperCase());
       destra.addEventListener("click", () => { applicaLingua(altra); mostra(0); });
     }
     testa.replaceChildren(indietro,
@@ -2440,7 +2440,7 @@ function pannelloConto() {
 }
 
 function scaricaDati() {
-  const dati = { app: "Radar", esportato: new Date().toISOString(), email: conto.utente()?.email || null, profilo: S.profilo, salvate: S.salvate, lette: S.lette, nascoste: [...S.nascoste] };
+  const dati = { app: "Nodus", esportato: new Date().toISOString(), email: conto.utente()?.email || null, profilo: S.profilo, salvate: S.salvate, lette: S.lette, nascoste: [...S.nascoste] };
   const url = URL.createObjectURL(new Blob([JSON.stringify(dati, null, 2)], { type: "application/json" }));
   const a = h("a", { href: url, download: `radar-miei-dati-${new Date().toISOString().slice(0, 10)}.json` });
   document.body.append(a);
@@ -2457,7 +2457,7 @@ function traduciGuscio() {
   document.querySelectorAll(".tab").forEach((t) => { const s = t.querySelector("span"); if (s && tab[t.dataset.vista]) s.textContent = tab[t.dataset.vista]; });
   $(".tabbar").setAttribute("aria-label", L("Sezioni", "Sections"));
   const etichette = {
-    "#apri-profilo": [L("Il tuo Radar: temi, mercati e impostazioni", "Your Radar: topics, markets and settings"), L("Il tuo Radar", "Your Radar")],
+    "#apri-profilo": [L("Il tuo Nodus: temi, mercati e impostazioni", "Your Nodus: topics, markets and settings"), L("Il tuo Nodus", "Your Nodus")],
     "#apri-glossario": [L("Glossario", "Glossary")],
     "#aggiorna": [L("Aggiorna", "Refresh")],
     "#chiudi-foglio": [L("Chiudi", "Close"), null],
@@ -2506,7 +2506,7 @@ function disegna({ nuova = false } = {}) {
   const titolo = nomeVista();
   main.replaceChildren(...fn());
   $("#barra-titolo").textContent = titolo;
-  document.title = S.vista === "per-te" ? "Radar" : `${titolo} · Radar`;
+  document.title = S.vista === "per-te" ? "Nodus" : `${titolo} · Nodus`;
   if (nuova) {
     main.classList.remove("vista-entra");
     void main.offsetWidth;
@@ -2613,7 +2613,7 @@ async function carica({ manuale = false } = {}) {
     if (manuale) mostraAvviso(nuove ? L(nuove === 1 ? "1 notizia nuova" : `${nuove} notizie nuove`, nuove === 1 ? "1 new story" : `${nuove} new stories`) : L("Già tutto aggiornato", "Already up to date"));
   } catch (err) {
     if (!S.dati) {
-      $("#vista").replaceChildren(intestazione("Radar"), h("div", { class: "vuoto" }, icona("calma"), h("strong", {}, L("Non riesco a caricare le notizie", "Can't load the news")), L("Controlla la connessione e premi Aggiorna in alto.", "Check your connection and tap Refresh at the top.")));
+      $("#vista").replaceChildren(intestazione("Nodus"), h("div", { class: "vuoto" }, icona("calma"), h("strong", {}, L("Non riesco a caricare le notizie", "Can't load the news")), L("Controlla la connessione e premi Aggiorna in alto.", "Check your connection and tap Refresh at the top.")));
     } else if (manuale) mostraAvviso(L("Sei offline: restano le notizie di prima", "You're offline: showing the earlier stories"));
   } finally {
     bottone.classList.remove("gira");
@@ -2645,14 +2645,14 @@ function schermataPassaggio(codice) {
   const msg = h("p", { class: "messaggio", role: "status", "aria-live": "polite" });
   const si = h("button", { type: "button", class: "bottone-primario premibile" }, L("Sì, entra nell'app", "Yes, sign in to the app"));
   const box = h("div", { class: "accesso" },
-    h("p", { class: "nota stretta" }, L("Hai appena toccato «Continua con Google» nel Radar sulla schermata Home di questo dispositivo? Conferma solo in quel caso.", "Did you just tap “Continue with Google” in Radar on this device's Home Screen? Confirm only if you did.")),
+    h("p", { class: "nota stretta" }, L("Hai appena toccato «Continua con Google» in Nodus sulla schermata Home di questo dispositivo? Conferma solo in quel caso.", "Did you just tap “Continue with Google” in Nodus on this device's Home Screen? Confirm only if you did.")),
     si, msg);
   si.addEventListener("click", async () => {
     si.disabled = true; msg.textContent = "";
     try {
       await conto.passaGoogle(codice);
       box.replaceChildren(h("div", { class: "vuoto" }, icona("calma"), h("strong", {}, L("Fatto", "Done")),
-        L("Chiudi questa finestra (Fine, in alto) e torna al Radar: entri da solo.", "Close this window (Done, at the top) and go back to Radar: you'll be signed in.")));
+        L("Chiudi questa finestra (Fine, in alto) e torna a Nodus: entri da solo.", "Close this window (Done, at the top) and go back to Nodus: you'll be signed in.")));
     } catch (e) { msg.textContent = e.message; si.disabled = false; }
   });
   $("#vista").replaceChildren(intestazione(L("Accesso con Google", "Sign in with Google")), box);

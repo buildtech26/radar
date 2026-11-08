@@ -1,4 +1,4 @@
-// Radar · account (Supabase) senza librerie esterne: accesso con codice o link via email, o con Google;
+// Nodus · account (Supabase) senza librerie esterne: accesso con codice o link via email, o con Google;
 // sessione; la propria riga. Il codice da scrivere nell'app c'è perché sull'iPhone il link della mail si aprirebbe
 // in Safari e non nell'app messa nella schermata Home.
 
@@ -248,7 +248,7 @@ async function daCodiceGoogle(codice) {
   localStorage.removeItem(VERIFICATORE);
   localStorage.removeItem(ATTESA);
   const fallito = (e, motivo) => {
-    console.warn("Radar, accesso con Google:", motivo || e.codice, e);
+    console.warn("Nodus, accesso con Google:", motivo || e.codice, e);
     if (e.stato !== 0) e.message = L(`L'accesso con Google non è riuscito: riprova da questa pagina. (${motivo || e.codice || e.stato})`, `Signing in with Google didn't work: try again from this page. (${motivo || e.codice || e.stato})`);
     return e;
   };
@@ -287,7 +287,7 @@ export function daLink() {
       try { motivo = decodeURIComponent(motivo); } catch { /* resta com'è */ }
       e.message += ` (${motivo.split(":")[0].slice(0, 140)})`;
     }
-    console.warn("Radar, ritorno con errore:", Object.fromEntries(p));
+    console.warn("Nodus, ritorno con errore:", Object.fromEntries(p));
     return Promise.reject(e);
   }
   return (async () => {

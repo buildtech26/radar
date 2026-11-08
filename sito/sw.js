@@ -1,5 +1,5 @@
-// Radar · funziona anche senza rete (in metro, in aula): la pagina dalla cache, le notizie dall'ultima volta.
-const VERSIONE = "radar-v37";
+// Nodus · funziona anche senza rete (in metro, in aula): la pagina dalla cache, le notizie dall'ultima volta.
+const VERSIONE = "radar-v38";
 const GUSCIO = ["./", "index.html", "privacy.html", "privacy-en.html", "stile.css", "app.js", "lingua.js", "conto.js", "config.js", "icona.svg", "manifest.webmanifest", "icona-180.png", "icona-192.png"];
 
 // cache: "reload" = i file freschi dal sito, non la copia che il browser tiene fino a 10 minuti (GitHub Pages):
@@ -47,7 +47,7 @@ self.addEventListener("fetch", (e) => {
 self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { testo: e.data ? e.data.text() : "" }; }
-  e.waitUntil(self.registration.showNotification(d.titolo || "Radar", {
+  e.waitUntil(self.registration.showNotification(d.titolo || "Nodus", {
     body: d.testo || "",
     icon: "icona-192.png",
     tag: d.tag || undefined,
@@ -56,7 +56,7 @@ self.addEventListener("push", (e) => {
   }));
 });
 
-// toccandola: il Radar già aperto va in primo piano e apre la notizia; se è chiuso si apre lì
+// toccandola: Nodus già aperto va in primo piano e apre la notizia; se è chiuso si apre lì
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
   const url = new URL((e.notification.data && e.notification.data.url) || "./", self.registration.scope).href;

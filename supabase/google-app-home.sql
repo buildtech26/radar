@@ -1,4 +1,4 @@
--- Radar · accesso con Google dall'app sulla schermata Home di iPhone e iPad
+-- Nodus · accesso con Google dall'app sulla schermata Home di iPhone e iPad
 -- Da incollare una volta sola in Supabase → SQL Editor → New query → Run (dopo schema.sql).
 --
 -- Lì iOS può aprire Google in una finestra a parte, con una memoria sua: il ritorno da Google (?code=…) arriva in

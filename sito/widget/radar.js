@@ -1,14 +1,14 @@
-// Radar · widget per iPhone e iPad (app Scriptable, gratis sull'App Store)
+// Nodus · widget per iPhone e iPad (app Scriptable, gratis sull'App Store)
 // https://buildtech26.github.io/radar/
 //
 // Come si mette:
-//   1. In Scriptable tocca +, incolla tutto questo testo e chiama lo script "Radar".
+//   1. In Scriptable tocca +, incolla tutto questo testo e chiama lo script "Nodus".
 //   2. Sulla schermata Home tieni premuto, tocca Modifica → Aggiungi widget → Scriptable, scegli la misura.
-//   3. Tieni premuto il widget → Modifica widget → Script: Radar.
+//   3. Tieni premuto il widget → Modifica widget → Script: Nodus.
 // Sulla schermata di blocco va uguale (Personalizza → widget → Scriptable).
 //
 // Mostra le notizie principali sul colore della loro sezione, con il logo della testata e il titolo.
-// Toccandolo si apre il Radar.
+// Toccandolo si apre Nodus.
 // Il campo "Parameter" del widget, facoltativo, cambia quali notizie. Esempi:
 //   sezioni: finanza, ai          (finanza, economia, ai, tech, scienza; senza, finanza, economia e ai)
 //   paesi: it, eu                 (it, eu, us, gb)
@@ -275,7 +275,7 @@ function vuoto(w, messaggio, colore = COL.testo2) {
 }
 
 // ------------------------------------------------------------ le misure
-// Ogni tocco, in qualunque punto, apre il Radar: è il w.url messo in costruisci().
+// Ogni tocco, in qualunque punto, apre Nodus: è il w.url messo in costruisci().
 function piccolo(w, nn) {
   w.setPadding(13, 13, 13, 13)
   copertinaNotizia(w, nn[0], { righe: 4, font: Font.boldSystemFont(15) })
@@ -364,7 +364,7 @@ async function costruisci(famiglia) {
   if (famiglia === "accessoryCircular") return bloccoTondo(w), w
   if (!nn.length) {
     if (!blocco) w.backgroundColor = COL.sfondo
-    vuoto(w, d ? T("Nessuna notizia recente", "No recent news") : T("Radar non raggiungibile: riprovo fra poco.", "Radar unreachable: retrying soon."),
+    vuoto(w, d ? T("Nessuna notizia recente", "No recent news") : T("Nodus non raggiungibile: riprovo fra poco.", "Nodus unreachable: retrying soon."),
       blocco ? BIANCO : COL.testo2)
     return w
   }
@@ -386,7 +386,7 @@ if (config.runsInWidget) {
 } else {
   // aperto dentro Scriptable: si sceglie quale misura vedere
   const a = new Alert()
-  a.title = "Radar"
+  a.title = "Nodus"
   a.message = T("Quale widget vuoi vedere?", "Which widget do you want to preview?")
   const misure = [["small", T("Piccolo", "Small")], ["medium", T("Medio", "Medium")], ["large", T("Grande", "Large")]]
   misure.forEach(([, nome]) => a.addAction(nome))

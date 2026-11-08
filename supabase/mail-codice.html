@@ -1,18 +1,18 @@
 <!-- Da incollare in Supabase → Authentication → Emails → Templates, sia in "Confirm signup" sia in "Magic Link"
      (serve l'SMTP personalizzato, già fatto con Brevo). Oggetto (Subject) per tutte e due:
-     Il tuo codice per Radar · Your Radar code
+     Il tuo codice per Nodus · Your Nodus code
      {{ .Token }} è il codice da scrivere nell'app (funziona anche dall'app nella schermata Home dell'iPhone);
      {{ .ConfirmationURL }} è il link, comodo sul computer.
      La mail è in tutte e due le lingue: Supabase non sa in che lingua è l'app di chi la chiede. -->
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#1d1d1f">
-  <h2 style="margin:0 0 8px;font-size:22px">Il tuo codice per Radar</h2>
+  <h2 style="margin:0 0 8px;font-size:22px">Il tuo codice per Nodus</h2>
   <p style="margin:0 0 4px;color:#66666b;font-size:15px">Scrivilo nell'app per entrare:</p>
-  <p lang="en" style="margin:0 0 16px;color:#8a8a8f;font-size:14px">Your Radar code: type it in the app to sign in.</p>
+  <p lang="en" style="margin:0 0 16px;color:#8a8a8f;font-size:14px">Your Nodus code: type it in the app to sign in.</p>
   <p style="margin:0 0 24px;font-size:34px;font-weight:700;letter-spacing:6px">{{ .Token }}</p>
   <p style="margin:0 0 4px;color:#66666b;font-size:15px">Oppure, se hai aperto questa mail sullo stesso dispositivo,
     <a href="{{ .ConfirmationURL }}" style="color:#007aff">tocca qui per entrare</a>.</p>
   <p lang="en" style="margin:0 0 24px;color:#8a8a8f;font-size:14px">Or, if you opened this email on the same device,
     <a href="{{ .ConfirmationURL }}" style="color:#007aff">tap here to sign in</a>.</p>
-  <p style="margin:0 0 4px;color:#8a8a8f;font-size:13px">Il codice vale per poco tempo. Se non hai chiesto tu di entrare in Radar, ignora questa mail: senza il codice nessuno può accedere.</p>
-  <p lang="en" style="margin:0;color:#8a8a8f;font-size:13px">The code is valid for a short time. If you didn't ask to sign in to Radar, ignore this email: no one can get in without the code.</p>
+  <p style="margin:0 0 4px;color:#8a8a8f;font-size:13px">Il codice vale per poco tempo. Se non hai chiesto tu di entrare in Nodus, ignora questa mail: senza il codice nessuno può accedere.</p>
+  <p lang="en" style="margin:0;color:#8a8a8f;font-size:13px">The code is valid for a short time. If you didn't ask to sign in to Nodus, ignore this email: no one can get in without the code.</p>
 </div>

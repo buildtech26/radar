@@ -1,4 +1,4 @@
-# Radar
+# Nodus
 
 Finanza, economia, AI, tecnologia e scienza in una pagina, per chiunque: le notizie che contano scelte in base ai temi di ogni utente,
 i mercati che segue, l'agenda di BCE, Fed e inflazione, e un glossario che spiega le parole tecniche dentro il testo.
@@ -28,19 +28,19 @@ provare una modifica senza riscaricare niente basta chiamare `raccogli.raggruppa
 
 Al primo avvio una presentazione chiede nome (facoltativo), temi, mercati e quello da mettere in evidenza;
 chi la salta riceve le scelte proposte (`predefinito: true` nel catalogo). Tutto si cambia poi dal pulsante
-in alto, **Il tuo Radar** (Temi, Mercati, Tu), dove c'è anche la pagina **Info** (non è consulenza, fonti, privacy).
+in alto, **Il tuo Nodus** (Temi, Mercati, Tu), dove c'è anche la pagina **Info** (non è consulenza, fonti, privacy).
 
 ## Italiano e inglese
 
 L'app si usa in italiano o in inglese (`sito/lingua.js`). La prima volta decide il browser (italiano se è tra le
-lingue preferite, altrimenti inglese); si cambia dal pulsante EN/IT della presentazione o da Il tuo Radar → Tu →
+lingue preferite, altrimenti inglese); si cambia dal pulsante EN/IT della presentazione o da Il tuo Nodus → Tu →
 Lingua dell'app, e la scelta (`interfaccia` nel profilo) segue l'account. Le notizie non si traducono: restano nella
 lingua della testata.
 
 ## Paesi delle notizie
 
 Ogni fonte in `interessi.json` ha un `paese`: `it`, `eu`, `us` o `gb` (dove ha sede la testata). Nella presentazione
-("Da dove vuoi le notizie?") e in Il tuo Radar → Tu → Notizie da si scelgono i paesi (`paesi` nel profilo, segue
+("Da dove vuoi le notizie?") e in Il tuo Nodus → Tu → Notizie da si scelgono i paesi (`paesi` nel profilo, segue
 l'account); almeno uno resta acceso. A chi non ha scelto si propongono Italia, Europa e Stati Uniti (app in italiano)
 oppure Stati Uniti, Regno Unito ed Europa (app in inglese). Per un paese nuovo: la sigla nelle fonti e una voce in
 `PAESI` in `sito/app.js`. I profili di prima avevano `lingue` ({it, en}): `normalizza()` li traduce in paesi.
@@ -60,12 +60,12 @@ oppure Stati Uniti, Regno Unito ed Europa (app in inglese). Per un paese nuovo: 
 |---|---|
 | catalogo dei temi (con le parole che li riconoscono), parole da nascondere, fonti, catalogo dei mercati | `interessi.json` |
 | appuntamenti (BCE, Fed, inflazione, trimestrali) | `agenda.json`: da riguardare quando escono i calendari nuovi |
-| sezioni delle notizie (Finanza, Economia, AI, Tech, Scienza) | la `sezione` di ogni fonte in `interessi.json`; per una sezione nuova anche `SEZIONI`, `GRUPPI_TEMI` e `COLORE_SEZIONE` in `sito/app.js` e il colore `--nome` (chiaro e scuro) in `sito/stile.css`. I temi hanno un `gruppo` con le stesse chiavi: nella presentazione e in Temi si mostrano divisi così. Ognuno sceglie le sezioni da vedere (presentazione, "Quali notizie vuoi?", e Il tuo Radar → Temi → Sezioni; `sezioni` nel profilo, null = tutte, una sezione nuova vale accesa): le spente spariscono da Notizie e Per te, e i loro temi restano scelti ma non contano. Se la stessa notizia esce in due feed vince la fonte che viene prima nell'elenco (per questo le fonti AI stanno prima di quelle Tech) |
+| sezioni delle notizie (Finanza, Economia, AI, Tech, Scienza) | la `sezione` di ogni fonte in `interessi.json`; per una sezione nuova anche `SEZIONI`, `GRUPPI_TEMI` e `COLORE_SEZIONE` in `sito/app.js` e il colore `--nome` (chiaro e scuro) in `sito/stile.css`. I temi hanno un `gruppo` con le stesse chiavi: nella presentazione e in Temi si mostrano divisi così. Ognuno sceglie le sezioni da vedere (presentazione, "Quali notizie vuoi?", e Il tuo Nodus → Temi → Sezioni; `sezioni` nel profilo, null = tutte, una sezione nuova vale accesa): le spente spariscono da Notizie e Per te, e i loro temi restano scelti ma non contano. Se la stessa notizia esce in due feed vince la fonte che viene prima nell'elenco (per questo le fonti AI stanno prima di quelle Tech) |
 | parole spiegate | `glossario.json` (la `categoria` è una delle sezioni) |
 | loghi delle fonti (accanto al nome, sulle schede) | `sito/loghi/`: dopo aver aggiunto una fonte, `py loghi.py` scarica quelli che mancano (serve Pillow). Se il feed sta su un altro indirizzo, `"sito"` nella fonte. Senza logo l'app mostra l'iniziale |
 | la notizia aperta (si apre toccando la scheda; Ctrl+clic apre l'articolo) | `apriNotizia()` in `sito/app.js`, nel foglio dal basso. Aperto solo "In breve" (testo della testata, `testo` fino a 700 caratteri); Parole da sapere, Perché la vedi e Ne parlano anche sono tendine chiuse (`tendina()`); in fondo Leggi su…, Salva, Condividi. Una pagina intera da destra è stata provata e scartata (06/11/2026) |
 | storie (i cerchi in cima a Per te, aggiunte l'08/11/2026) | `strisciaStorie()` e `apriStorie()` in `sito/app.js`, stile in `sito/stile.css` (`.storie`, `.storia…`). Un cerchio per ogni sezione accesa; dentro le notizie delle ultime 24 ore (48 se sono meno di 3) di quella sezione, ordinate con `storieDi()`: temi della persona, quante testate ne parlano, quanto è recente (metà valore ogni 12 ore); al massimo 7, 2 per testata. Una schermata per notizia: la foto (nitida nel riquadro e sfocata dietro) o la sfumatura della sezione col suo simbolo, titolo e "In breve" tradotti se c'è la traduzione nella lingua dell'app. Avanzano da sole (5-10 secondi, in base al testo); tocco a destra/sinistra, tenere premuto ferma, giù chiude, di lato cambia sezione; frecce ed Esc sulla tastiera. «Apri la notizia» apre il foglio di sempre, con le storie ferme sotto. Le viste stanno solo sul dispositivo (`radar.storieViste`, ultime 600) e non segnano la notizia come letta: le sezioni già viste diventano grigie e vanno in fondo. I colori sfumati e i simboli sono gli stessi del widget (`FONDO_SEZIONE`, `SIMBOLO_SEZIONE`): per una sezione nuova vanno aggiunti lì |
-| widget per iPhone e iPad | `sito/widget/radar.js`, per l'app Scriptable (gratis): istruzioni e parametri in testa al file, online su `…/radar/widget/radar.js`. Solo notizie (niente mercati, orari né foto, scelto il 07/11/2026): il colore sfumato della sezione col suo simbolo, il logo della testata (`sito/loghi/`), l'etichetta della sezione e il titolo. Qualunque tocco apre il Radar, non l'articolo. I loghi restano nella cartella di Scriptable sul telefono, già rimpiccioliti. Si aggiorna quando iOS lo lascia fare (chiede ogni 30 minuti), e i dati cambiano ogni ora dalle 6 alle 23. Legge `widget.json` (~40 KB, lo scrive `per_widget()` in `raccogli.py` a ogni giro), e se manca `dati.json`. I widget veri di iOS (WidgetKit) vogliono un'app nativa e l'Apple Developer Program a pagamento |
+| widget per iPhone e iPad | `sito/widget/radar.js`, per l'app Scriptable (gratis): istruzioni e parametri in testa al file, online su `…/radar/widget/radar.js`. Solo notizie (niente mercati, orari né foto, scelto il 07/11/2026): il colore sfumato della sezione col suo simbolo, il logo della testata (`sito/loghi/`), l'etichetta della sezione e il titolo. Qualunque tocco apre Nodus, non l'articolo. I loghi restano nella cartella di Scriptable sul telefono, già rimpiccioliti. Si aggiorna quando iOS lo lascia fare (chiede ogni 30 minuti), e i dati cambiano ogni ora dalle 6 alle 23. Legge `widget.json` (~40 KB, lo scrive `per_widget()` in `raccogli.py` a ogni giro), e se manca `dati.json`. I widget veri di iOS (WidgetKit) vogliono un'app nativa e l'Apple Developer Program a pagamento |
 | chiaro e scuro | `sito/stile.css`: le regole solo-scure si scrivono `:root[data-aspetto="scuro"] …` (mai `@media (prefers-color-scheme)`). La scelta Automatico/Chiaro/Scuro sta in Tu → Aspetto, vale per dispositivo (`radar.aspetto`) e la applica già lo script in testa a `index.html` (e alle due pagine privacy) |
 
 ## Da dove vengono i prezzi
@@ -104,14 +104,14 @@ del codice è in `supabase/mail-codice.html`. La chiave **secret** di Supabase n
 
 ## Notifiche
 
-Solo con l'account (scelto da Mattia il 07/11/2026). In Il tuo Radar → Notifiche: un interruttore per questo
+Solo con l'account (scelto da Mattia il 07/11/2026). In Il tuo Nodus → Notifiche: un interruttore per questo
 dispositivo e, per ogni sezione accesa, al massimo un tema (`profilo.notifiche = {sezione: tema}`, viaggia col
 profilo). Su iPhone e iPad arrivano solo all'app aggiunta alla Home (iOS 16.4+).
 
 - `sito/app.js` (`pannelloNotifiche`, `attivaNotifiche`): chiede il permesso al tocco, iscrive il dispositivo con
   la chiave pubblica VAPID di `sito/config.js` e lo manda a Supabase con `iscrivi()`. Uscendo dall'account o
   spegnendo, `disiscrivi()`. L'indirizzo `#notizia=<id>` apre la notizia sopra la vista (`apriDaNotifica`).
-- `sito/sw.js`: mostra la notifica (`push`) e al tocco porta il Radar in primo piano su quella notizia.
+- `sito/sw.js`: mostra la notifica (`push`) e al tocco porta Nodus in primo piano su quella notizia.
 - `supabase/notifiche.sql`: tabelle `iscrizioni` (un dispositivo) e `notifiche_inviate` (registro di 3 giorni),
   che il browser non vede; solo le funzioni `iscrivi`/`disiscrivi`. Da incollare una volta nel SQL Editor.
 - `notifica.py`: gira su GitHub dopo la pubblicazione. Tema nel titolo (anche tradotto), sezioni e paesi della

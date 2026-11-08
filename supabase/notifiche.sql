@@ -1,4 +1,4 @@
--- Radar · notifiche (Supabase). Da incollare una volta sola in Supabase → SQL Editor → New query → Run,
+-- Nodus · notifiche (Supabase). Da incollare una volta sola in Supabase → SQL Editor → New query → Run,
 -- dopo schema.sql. Si può rilanciare senza danni.
 --
 -- Due tabelle che il browser non vede mai direttamente:

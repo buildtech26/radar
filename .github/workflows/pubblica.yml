@@ -75,5 +75,5 @@ jobs:
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git commit --allow-empty -m "Radar attivo: $(date -u +%Y-%m)"
+          git commit --allow-empty -m "Nodus attivo: $(date -u +%Y-%m)"
           git push
