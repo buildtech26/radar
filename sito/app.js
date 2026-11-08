@@ -59,6 +59,13 @@ const ICONE = {
   stellaPiena: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>',
   spunta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   radar: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="24" cy="24" r="19"/><circle cx="24" cy="24" r="11.5" opacity=".55"/><circle cx="24" cy="24" r="3.2" fill="currentColor" stroke="none"/><path d="M24 24L37 11"/></svg>',
+  chiudi: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  // il simbolo di ogni sezione (cerchi delle storie): gli stessi del widget
+  sFinanza: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 17.5l5-5.5 4 3.5 7.5-8.5"/><path d="M15.5 7h4.5v4.5"/></svg>',
+  sEconomia: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.5L12 4l8.5 5.5z"/><path d="M4.5 20h15"/><path d="M6.5 12v5.5M10 12v5.5M14 12v5.5M17.5 12v5.5"/></svg>',
+  sAi: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.9 4.6 4.6 1.9-4.6 1.9L12 16.5l-1.9-4.6L5.5 10l4.6-1.9z"/><path d="M18.5 15.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg>',
+  sTech: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/><rect x="9.75" y="9.75" width="4.5" height="4.5" rx=".8"/><path d="M9.5 3.5v3M14.5 3.5v3M9.5 17.5v3M14.5 17.5v3M3.5 9.5h3M3.5 14.5h3M17.5 9.5h3M17.5 14.5h3"/></svg>',
+  sScienza: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><ellipse cx="12" cy="12" rx="9" ry="3.6"/><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(120 12 12)"/></svg>',
 };
 function icona(nome, classe) {
   const t = document.createElement("template");
@@ -179,6 +186,7 @@ const S = {
   salvate: mem.get("salvate", []),
   nascoste: new Set(mem.get("nascoste", [])),
   lette: mem.get("lette", []),
+  storieViste: new Set(mem.get("storieViste", [])),   // le notizie già passate nelle storie (solo questo dispositivo)
   tempi: mem.get("tempi", {}),
   versioneTemi: 0,
 };
@@ -1076,6 +1084,289 @@ document.addEventListener("click", (e) => {
   mostraTermine(Number(g.dataset.g));
 }, true);
 
+// ---------------------------------------------------------------- storie
+// In cima a Per te, un cerchio per ogni sezione accesa, come le storie di Instagram. Dentro, una schermata per
+// notizia: le più importanti delle ultime 24 ore di quella sezione (vicine ai tuoi temi, raccontate da più testate,
+// recenti), al massimo 7 e 2 per testata. Avanzano da sole; un tocco a destra o a sinistra va avanti o indietro,
+// tenere premuto ferma, scorrere in giù chiude, scorrere di lato cambia sezione. «Apri la notizia» apre il foglio
+// di sempre, e intanto le storie restano ferme lì sotto.
+// Le storie viste restano su questo dispositivo (radar.storieViste) e non segnano la notizia come letta: una
+// schermata di 6 secondi non è una lettura. La segna letta solo «Apri la notizia».
+
+const FONDO_SEZIONE = { finanza: ["#34c759", "#145a27"], economia: ["#ff9f0a", "#a33a00"], ai: ["#8e8cff", "#3a2fb0"], tech: ["#38b6ff", "#004e7a"], scienza: ["#ff5b84", "#8a0a2e"] };
+const SIMBOLO_SEZIONE = { finanza: "sFinanza", economia: "sEconomia", ai: "sAi", tech: "sTech", scienza: "sScienza" };
+const fondoSezione = (s) => FONDO_SEZIONE[s] || ["#8e8e93", "#3a3a3c"];
+const STORIE_MAX = 7;
+
+function storieDi(sezione) {
+  const tutte = visibili().filter((n) => n.sezione === sezione && n.data);
+  let recenti = tutte.filter((n) => oreDa(n) <= 24);
+  if (recenti.length < 3) recenti = tutte.filter((n) => oreDa(n) <= 48);   // giornata magra: anche ieri
+  const ordinate = recenti
+    .map((n) => ({ n, r: (1 + valuta(n).p + 0.75 * (n.altre?.length || 0)) * Math.pow(0.5, Math.max(0, oreDa(n)) / 12) }))
+    .sort((a, b) => b.r - a.r);
+  const perFonte = {}, scelte = [];
+  for (const { n } of ordinate) {
+    if ((perFonte[n.fonte] = (perFonte[n.fonte] || 0) + 1) > 2) continue;
+    scelte.push(n);
+    if (scelte.length >= STORIE_MAX) break;
+  }
+  return scelte;
+}
+// le sezioni con almeno una storia; prima quelle con qualcosa di nuovo, poi le già viste (nell'ordine di sempre)
+function gruppiStorie() {
+  const nuove = (g) => g.notizie.some((n) => !S.storieViste.has(n.id));
+  const gruppi = [...sezioniScelte()].filter((s) => SEZIONI()[s]).map((s) => ({ sezione: s, notizie: storieDi(s) })).filter((g) => g.notizie.length);
+  for (const g of gruppi) g.nuove = nuove(g);
+  return gruppi.sort((a, b) => b.nuove - a.nuove);
+}
+
+function strisciaStorie() {
+  const gruppi = gruppiStorie();
+  if (!gruppi.length) return null;
+  const box = h("div", { class: "storie", role: "group", "aria-label": L("Storie", "Stories") });
+  gruppi.forEach((g, i) => {
+    const [c1, c2] = fondoSezione(g.sezione);
+    const b = h("button", { type: "button", class: "storia-cerchio premibile" + (g.nuove ? " nuova" : ""), style: `--c1:${c1};--c2:${c2}` },
+      h("span", { class: "anello", "aria-hidden": "true" }, h("span", { class: "disco" }, icona(SIMBOLO_SEZIONE[g.sezione] || "radar"))),
+      h("span", { class: "nome" }, SEZIONI()[g.sezione]));
+    b.setAttribute("aria-label", `${SEZIONI()[g.sezione]}: ${g.notizie.length} ${L("notizie", "stories")}${g.nuove ? L(", nuove", ", new") : ""}`);
+    b.addEventListener("click", () => apriStorie(gruppi, i));
+    box.append(b);
+  });
+  return box;
+}
+function rinfrescaStrisciaStorie() {
+  if (S.vista !== "per-te") return;
+  const vecchia = $("#vista .storie");
+  if (!vecchia) return;
+  const nuova = strisciaStorie();
+  nuova ? vecchia.replaceWith(nuova) : vecchia.remove();
+}
+function segnaVistaStoria(id) {
+  if (S.storieViste.has(id)) return;
+  S.storieViste.add(id);
+  mem.set("storieViste", [...S.storieViste].slice(-600));
+}
+
+function apriStorie(gruppi, g0) {
+  const V = { g: g0, i: 0, t: 0, durata: 6000, ultimo: 0, raf: 0, tenuta: false, chiusa: false, y: 0, anim: null, animX: null, x: 0 };
+  const prima = document.activeElement;
+  const primaNonVista = (g) => Math.max(0, gruppi[g].notizie.findIndex((n) => !S.storieViste.has(n.id)));
+  V.i = primaNonVista(g0);
+
+  const fondo = h("div", { class: "storia-fondo", "aria-hidden": "true" });
+  const barre = h("div", { class: "storia-barre", "aria-hidden": "true" });
+  const testa = h("div", { class: "storia-testa" });
+  const corpo = h("div", { class: "storia-corpo" });
+  const azioni = h("div", { class: "storia-azioni" });
+  const zonaSx = h("button", { type: "button", class: "storia-zona sx", "aria-label": L("Notizia precedente", "Previous story") });
+  const zonaDx = h("button", { type: "button", class: "storia-zona dx", "aria-label": L("Notizia successiva", "Next story") });
+  const scena = h("div", { class: "storia" }, fondo, barre, testa, corpo, zonaSx, zonaDx, azioni);
+  const el = h("div", { class: "storie-schermo", role: "dialog", "aria-modal": "true", "aria-label": L("Storie", "Stories"), tabindex: "-1" }, scena);
+  document.body.append(el);
+  document.body.style.overflow = "hidden";
+  el.focus({ preventScroll: true });
+
+  // in pausa mentre si tiene premuto, mentre sopra c'è il foglio (la notizia aperta, il glossario…) o la pagina non si vede
+  const inPausa = () => V.tenuta || !F.el.hidden || document.hidden;
+
+  function mostra(entrata) {
+    const g = gruppi[V.g], n = g.notizie[V.i];
+    const sez = g.sezione, [c1, c2] = fondoSezione(sez);
+    segnaVistaStoria(n.id);
+    scena.style.setProperty("--c1", c1);
+    scena.style.setProperty("--c2", c2);
+
+    // la traduzione si mostra solo se è nella lingua dell'app (come nella notizia aperta)
+    const trad = n.traduzione && n.traduzione.lingua === lingua() && n.traduzione.lingua !== n.lingua ? n.traduzione : null;
+    const titolo = trad?.titolo || n.titolo;
+    let breve = (trad?.testo || n.sommario || n.testo || "").trim();
+    if (breve.length > 280) breve = breve.slice(0, 280).replace(/\s+\S*$/, "") + "…";
+    V.t = 0;
+    V.durata = 5000 + Math.min(5000, (titolo.length + breve.length) * 15);
+
+    // fondo: la foto sfocata dietro e nitida nel riquadro; senza foto, la sfumatura della sezione col suo simbolo
+    const senzaFoto = () => { scena.classList.add("senza-foto"); fondo.replaceChildren(icona(SIMBOLO_SEZIONE[sez] || "radar", "storia-simbolo")); };
+    scena.classList.remove("senza-foto");
+    if (n.immagine) {
+      const dietro = h("img", { class: "sfocata", src: n.immagine, alt: "", decoding: "async", referrerpolicy: "no-referrer" });
+      const davanti = h("img", { class: "nitida", src: n.immagine, alt: "", decoding: "async", referrerpolicy: "no-referrer" });
+      davanti.addEventListener("error", senzaFoto, { once: true });
+      fondo.replaceChildren(dietro, h("div", { class: "riquadro" }, davanti));
+    } else senzaFoto();
+
+    barre.replaceChildren(...g.notizie.map((_, k) => h("span", { class: "barra-storia" }, h("span", { class: "pieno", style: `transform:scaleX(${k < V.i ? 1 : 0})` }))));
+    V.pieno = barre.children[V.i].firstChild;
+
+    const bChiudi = h("button", { type: "button", class: "storia-chiudi premibile", "aria-label": L("Chiudi le storie", "Close stories") }, icona("chiudi"));
+    bChiudi.addEventListener("click", () => chiudi());
+    testa.replaceChildren(
+      h("span", { class: "disco", "aria-hidden": "true" }, icona(SIMBOLO_SEZIONE[sez] || "radar")),
+      h("span", { class: "sezione-nome" }, SEZIONI()[sez]),
+      h("span", { class: "conta" }, `${V.i + 1}/${g.notizie.length}`),
+      bChiudi);
+
+    const temi = valuta(n).temi.slice(0, 2);
+    const altre = [...new Set((n.altre || []).map((a) => a.fonte.split(" · ")[0]))];
+    corpo.replaceChildren(...[   // replaceChildren, a differenza di h(), scriverebbe "null": i vuoti si tolgono
+      h("div", { class: "storia-fonte" }, marchio(n), h("span", { class: "fonte" }, n.fonte), h("span", { "aria-hidden": "true" }, "·"),
+        h("time", { datetime: new Date(n.data).toISOString() }, fa(n.data)),
+        n.lingua !== lingua() && !trad ? h("span", { class: "etichetta" }, n.lingua.toUpperCase()) : null),
+      h("h2", { class: "storia-titolo", lang: trad ? trad.lingua : n.lingua }, titolo),
+      breve ? h("p", { class: "storia-breve", lang: trad?.testo ? trad.lingua : n.lingua }, breve) : null,
+      trad ? h("p", { class: "storia-nota" }, L(`Tradotto automaticamente ${daLingua(n.lingua)}`, `Machine-translated ${daLingua(n.lingua)}`)) : null,
+      temi.length || altre.length ? h("div", { class: "storia-temi" },
+        temi.map((t) => h("span", { class: "tema" }, t)),
+        altre.length ? h("span", { class: "anche-su" }, L("Anche su ", "Also on ") + (altre.length > 2 ? L(`${altre.slice(0, 2).join(", ")} e altre ${altre.length - 2}`, `${altre.slice(0, 2).join(", ")} and ${altre.length - 2} more`) : elenco(altre))) : null) : null,
+    ].filter(Boolean));
+
+    const bApri = h("button", { type: "button", class: "storia-apri premibile" }, L("Apri la notizia", "Open the story"), icona("freccia"));
+    bApri.addEventListener("click", () => apriNotizia(n, null));
+    const etSalva = () => (salvata(n.id) ? T.togliSalvata() : T.salvaPerDopo());
+    const bSalva = h("button", { type: "button", class: "storia-salva premibile", "aria-pressed": String(salvata(n.id)), "aria-label": etSalva(), title: etSalva() }, icona(salvata(n.id) ? "segnalibroPieno" : "segnalibro"));
+    bSalva.addEventListener("click", () => {
+      alternaSalvata(n, null);
+      bSalva.setAttribute("aria-pressed", String(salvata(n.id)));
+      bSalva.setAttribute("aria-label", etSalva());
+      bSalva.title = etSalva();
+      bSalva.replaceChildren(icona(salvata(n.id) ? "segnalibroPieno" : "segnalibro"));
+    });
+    azioni.replaceChildren(bApri, bSalva);
+
+    if (entrata && !RIDOTTO.matches) {
+      scena.classList.remove("entra-dx", "entra-sx");
+      void scena.offsetWidth;
+      scena.classList.add(entrata > 0 ? "entra-dx" : "entra-sx");
+    }
+    // la foto della prossima, già pronta
+    const dopo = g.notizie[V.i + 1] || gruppi[V.g + 1]?.notizie[primaNonVista(V.g + 1)];
+    if (dopo?.immagine) { const p = new Image(); p.referrerPolicy = "no-referrer"; p.src = dopo.immagine; }
+  }
+
+  function avanti() {
+    if (V.i < gruppi[V.g].notizie.length - 1) { V.i++; mostra(); }
+    else if (V.g < gruppi.length - 1) cambiaGruppo(1);
+    else chiudi();
+  }
+  function indietro() {
+    if (V.i > 0) { V.i--; mostra(); }
+    else if (V.g > 0) { V.g--; V.i = 0; mostra(-1); }
+    else { V.t = 0; }   // la prima di tutte: riparte
+  }
+  function cambiaGruppo(d) {
+    V.g += d;
+    V.i = d > 0 ? primaNonVista(V.g) : 0;
+    impostaX(0);
+    mostra(d);
+  }
+
+  function giro(t) {
+    const dt = V.ultimo ? Math.min(100, t - V.ultimo) : 0;
+    V.ultimo = t;
+    document.body.style.overflow = "hidden";   // il foglio, chiudendosi, rimette lo scorrimento della pagina: qui resta fermo
+    if (!inPausa()) V.t += dt;
+    const p = Math.min(1, V.t / V.durata);
+    if (V.pieno) V.pieno.style.transform = `scaleX(${p})`;
+    if (p >= 1) avanti();
+    if (!V.chiusa) V.raf = requestAnimationFrame(giro);
+  }
+
+  // trascinare: in giù chiude (lo schermo segue il dito), di lato cambia sezione
+  const impostaY = (y) => {
+    V.y = y;
+    const p = Math.max(0, Math.min(1, y / innerHeight));
+    scena.style.transform = y ? `translate3d(0,${y}px,0) scale(${1 - p * 0.12})` : "";
+    el.style.backgroundColor = `rgba(0,0,0,${(0.94 * (1 - p)).toFixed(3)})`;
+  };
+  const impostaX = (x) => { V.x = x; scena.style.translate = x ? `${x}px 0` : ""; };
+  let tocco = null, annullaClick = false, timerTenuta = 0;
+  scena.addEventListener("pointerdown", (e) => {
+    if (e.button > 0 || e.target.closest(".storia-azioni, .storia-chiudi")) return;
+    V.anim?.ferma(); V.animX?.ferma();
+    tocco = { x: e.clientX, y: e.clientY, id: e.pointerId, dir: null, storia: [] };
+    annullaClick = false;
+    clearTimeout(timerTenuta);
+    timerTenuta = setTimeout(() => { if (tocco && !tocco.dir) { V.tenuta = true; el.classList.add("tenuta"); annullaClick = true; } }, 220);
+  });
+  scena.addEventListener("pointermove", (e) => {
+    if (!tocco || e.pointerId !== tocco.id) return;
+    const dx = e.clientX - tocco.x, dy = e.clientY - tocco.y;
+    if (!tocco.dir) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) tocco.dir = "v";
+      else if (Math.abs(dx) > 10) tocco.dir = "o";
+      else return;
+      clearTimeout(timerTenuta);
+      annullaClick = true;
+      V.tenuta = true;
+      tocco.x = e.clientX; tocco.y = e.clientY;   // si parte da qui: niente salto di 10 px
+      try { scena.setPointerCapture(e.pointerId); } catch { /* puntatore già sparito: si segue lo stesso */ }
+      return;
+    }
+    const W = scena.offsetWidth;
+    tocco.storia.push([e.timeStamp, tocco.dir === "v" ? e.clientY : e.clientX]);
+    if (tocco.storia.length > 8) tocco.storia.shift();
+    if (tocco.dir === "v") impostaY(dy > 0 ? dy : -elastico(-dy, innerHeight, 0.2));
+    else {
+      const bordo = (dx > 0 && V.g === 0) || (dx < 0 && V.g === gruppi.length - 1);
+      impostaX(bordo ? Math.sign(dx) * elastico(Math.abs(dx), W, 0.3) : dx);
+    }
+  });
+  const fine = (e) => {
+    if (!tocco || e.pointerId !== tocco.id) return;
+    clearTimeout(timerTenuta);
+    const t = tocco;
+    tocco = null;
+    V.tenuta = false;
+    el.classList.remove("tenuta");
+    const v = velocitaDa(t.storia, e.timeStamp);
+    if (t.dir === "v") {
+      if (V.y + proietta(v) > innerHeight * 0.22) chiudi(v);
+      else V.anim = molla({ da: V.y, a: 0, velocita: v, risposta: 0.32, aggiorna: impostaY });
+    } else if (t.dir === "o") {
+      const W = scena.offsetWidth, arrivo = V.x + proietta(v);
+      if (arrivo < -W * 0.25 && V.g < gruppi.length - 1) cambiaGruppo(1);
+      else if (arrivo > W * 0.25 && V.g > 0) cambiaGruppo(-1);
+      else V.animX = molla({ da: V.x, a: 0, velocita: v, risposta: 0.3, aggiorna: impostaX });
+    }
+  };
+  scena.addEventListener("pointerup", fine);
+  scena.addEventListener("pointercancel", fine);
+  zonaSx.addEventListener("click", () => { if (annullaClick) { annullaClick = false; return; } indietro(); });
+  zonaDx.addEventListener("click", () => { if (annullaClick) { annullaClick = false; return; } avanti(); });
+
+  const tasti = (e) => {
+    if (!F.el.hidden || V.chiusa) return;   // il foglio aperto sopra ha i suoi tasti
+    if (e.key === "Escape") { e.preventDefault(); chiudi(); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); avanti(); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); indietro(); }
+    else if (e.key === "ArrowDown" && V.g < gruppi.length - 1) { e.preventDefault(); cambiaGruppo(1); }
+    else if (e.key === "ArrowUp" && V.g > 0) { e.preventDefault(); cambiaGruppo(-1); }
+  };
+  document.addEventListener("keydown", tasti);
+
+  function chiudi(velocita = 0) {
+    if (V.chiusa) return;
+    V.chiusa = true;
+    cancelAnimationFrame(V.raf);
+    clearTimeout(timerTenuta);
+    document.removeEventListener("keydown", tasti);
+    el.style.pointerEvents = "none";
+    const via = () => {
+      el.remove();
+      if (F.el.hidden) document.body.style.overflow = "";
+      prima?.focus?.({ preventScroll: true });
+      rinfrescaStrisciaStorie();
+    };
+    V.anim?.ferma();
+    if (RIDOTTO.matches) { el.style.transition = "opacity 200ms"; el.style.opacity = "0"; setTimeout(via, 200); return; }
+    V.anim = molla({ da: V.y, a: innerHeight, velocita: Math.max(velocita, 600), risposta: 0.32, aggiorna: impostaY, fine: via });
+  }
+
+  mostra();
+  V.raf = requestAnimationFrame(giro);
+}
+
 // ---------------------------------------------------------------- viste
 
 function intestazione(titolo, sotto) {
@@ -1126,6 +1417,8 @@ function vistaPerTe() {
   const sotto = h("span", {}, h("span", { class: "data" }, data(ora, { weekday: "long", day: "numeric", month: "long" })), ` · ${L("aggiornato", "updated")} ${quandoFrase(S.dati.aggiornato)}`);
   const nome = S.profilo.nome.trim();
   const parti = [intestazione(nome ? `${saluto}, ${nome}` : saluto, sotto)];
+  const storie = strisciaStorie();
+  if (storie) parti.push(storie);
   if (Date.now() - S.dati.aggiornato > 3 * 36e5) parti.push(h("div", { class: "banner" }, L("L'aggiornamento automatico è in ritardo: le notizie nuove arrivano appena riparte.", "Automatic updates are running late: new stories will arrive as soon as they resume.")));
   if (mieiMercati().length) parti.push(stripMercati());
   const e0 = prossimoEvento();
