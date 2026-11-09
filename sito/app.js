@@ -2566,6 +2566,17 @@ function vai() {
 }
 addEventListener("hashchange", vai);
 
+// Le schede in basso cambiano vista da qui, senza lasciar navigare il link: il browser dentro Instagram a volte
+// ricaricava la pagina intera a ogni tocco (pagina grigia, notizie riscaricate da capo). L'indirizzo cambia lo
+// stesso (#notizie…), così Indietro e i link continuano a funzionare: tornando indietro ci pensa hashchange.
+document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", (e) => {
+  if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button) return;   // "apri in un'altra scheda" resta
+  e.preventDefault();
+  if (t.dataset.vista === S.vista && location.hash.slice(1) === t.dataset.vista) return;   // già lì: come prima, niente
+  history.pushState(null, "", `${location.pathname}${location.search}#${t.dataset.vista}`);
+  vai();
+}));
+
 // ---------------------------------------------------------------- barra delle sezioni che si nasconde
 // Sul PC (barra laterale): il pulsante in alto a sinistra, o Ctrl+B, la chiude e la riapre; la scelta resta.
 // Sul telefono (barra in basso): si fa da parte mentre scorri giù e torna appena risali.
