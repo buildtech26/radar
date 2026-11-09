@@ -1,0 +1,47 @@
+# Storie Instagram a mano: cancella storie già uscite (id dal log dei giri) e/o pubblica una cartella di JPG
+# già messa sul ramo storie-ig. Non tocca il registro dei giri automatici (storie.yml).
+name: Storie a mano
+
+on:
+  workflow_dispatch:
+    inputs:
+      cancella:
+        description: "Id delle storie da cancellare, separati da spazi (vuoto = niente)"
+        type: string
+        default: ""
+      cartella:
+        description: "Cartella del ramo storie-ig da pubblicare, es. 2026-11-09-sera (vuoto = niente)"
+        type: string
+        default: ""
+
+concurrency:
+  group: storie
+  cancel-in-progress: false
+
+jobs:
+  a-mano:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cancella
+        if: inputs.cancella != ''
+        run: python pubblica_ig.py cancella ${{ inputs.cancella }}
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_ID: ${{ vars.INSTAGRAM_ID }}
+      - uses: actions/checkout@v4
+        if: inputs.cartella != ''
+        with:
+          ref: storie-ig
+          path: ig
+      - name: Pubblica
+        if: inputs.cartella != ''
+        run: |
+          python pubblica_ig.py pubblica "ig/${{ inputs.cartella }}" \
+            "https://raw.githubusercontent.com/${{ github.repository }}/storie-ig/${{ inputs.cartella }}"
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_ID: ${{ vars.INSTAGRAM_ID }}

@@ -10,6 +10,7 @@ Gira su GitHub Actions (.github/workflows/storie.yml), scelta di Mattia del 09/1
 diretta, gratis, senza passo di approvazione. Il token sta nel segreto INSTAGRAM_TOKEN del repo (mai nel
 codice né nei log): token dell'utente di sistema del login unificato, non scade (vedi README, "Storie Instagram").
     python pubblica_ig.py verifica      controlla il token e l'account senza pubblicare niente
+    python pubblica_ig.py cancella ID…  toglie da Instagram le storie con quegli id (sono nel log di ogni giro)
 Usa solo la libreria standard, più Pillow per i JPG.
 """
 import json
@@ -39,8 +40,8 @@ def chiama(metodo, percorso, esci=True, **parametri):
     API = api()
     parametri["access_token"] = os.environ["INSTAGRAM_TOKEN"]
     dati = urllib.parse.urlencode(parametri)
-    if metodo == "GET":
-        richiesta = urllib.request.Request(f"{API}/{percorso}?{dati}")
+    if metodo in ("GET", "DELETE"):
+        richiesta = urllib.request.Request(f"{API}/{percorso}?{dati}", method=metodo)
     else:
         richiesta = urllib.request.Request(f"{API}/{percorso}", data=dati.encode(), method="POST")
     try:
@@ -117,7 +118,8 @@ def pubblica(cartella, base, solo_prima=False):
     ig, nome = account()
     io = {"user_id": ig}
     print(f"pubblico come @{nome}")
-    immagini = sorted((cartella / "jpg").glob("*.jpg"))[:1 if solo_prima else None]
+    dove = cartella / "jpg" if (cartella / "jpg").is_dir() else cartella   # dal ramo storie-ig i JPG sono sciolti
+    immagini = sorted(dove.glob("*.jpg"))[:1 if solo_prima else None]
     if not immagini:
         sys.exit(f"nessun JPG in {cartella / 'jpg'}: prima `jpg`")
     for f in immagini:   # in ordine: le storie si vedono nell'ordine in cui escono
@@ -129,6 +131,15 @@ def pubblica(cartella, base, solo_prima=False):
     print(f"{len(immagini)} storie pubblicate")
 
 
+def cancella(ids):
+    """Toglie da Instagram le storie (o i post) con questi id: quelli che pubblica() scrive nel log."""
+    ig, nome = account()
+    print(f"cancello da @{nome}")
+    for media in ids:
+        esito = chiama("DELETE", media)
+        print(f"  {media}: {'cancellata' if esito.get('success') else esito}")
+
+
 def verifica():
     """Controlla il token senza pubblicare niente: dice con quale strada funziona e su quale account."""
     ig, nome = account()
@@ -138,6 +149,8 @@ def verifica():
 def main():
     if len(sys.argv) >= 2 and sys.argv[1] == "verifica":
         return verifica()
+    if len(sys.argv) >= 3 and sys.argv[1] == "cancella":
+        return cancella(sys.argv[2:])
     if len(sys.argv) < 3 or sys.argv[1] not in ("jpg", "pubblica"):
         sys.exit(__doc__)
     cartella = Path(sys.argv[2])
