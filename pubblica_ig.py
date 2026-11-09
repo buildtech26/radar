@@ -81,6 +81,17 @@ def aspetta_pronto(contenitore):
 
 def account():
     """L'id dell'account Instagram che pubblica e il suo nome."""
+    # con il token dell'utente di sistema (login unificato) l'id dell'account si dà a mano: variabile
+    # INSTAGRAM_ID del repo (non è un segreto, è il numero dell'account)
+    ig = os.environ.get("INSTAGRAM_ID", "").strip()
+    if ig:
+        for host in ("https://graph.facebook.com", "https://graph.instagram.com"):
+            HOST["api"] = host
+            try:
+                return ig, chiama("GET", ig, esci=False, fields="username").get("username")
+            except ErroreApi as e:
+                print(f"{host}: {e}")
+        sys.exit(f"l'account {ig} non risponde con questo token né su Facebook né su Instagram")
     try:
         io = chiama("GET", "me", esci=False, fields="user_id,username")
         return io["user_id"], io.get("username")

@@ -77,3 +77,4 @@ jobs:
             "https://raw.githubusercontent.com/${{ github.repository }}/storie-ig/${{ steps.storie.outputs.nome }}"
         env:
           INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_ID: ${{ vars.INSTAGRAM_ID }}
