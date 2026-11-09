@@ -10,6 +10,8 @@ Gira su GitHub Actions (.github/workflows/storie.yml), scelta di Mattia del 09/1
 diretta, gratis, senza passo di approvazione. Il token sta nel segreto INSTAGRAM_TOKEN del repo (mai nel
 codice né nei log): token dell'utente di sistema del login unificato, non scade (vedi README, "Storie Instagram").
     python pubblica_ig.py verifica      controlla il token e l'account senza pubblicare niente
+    python pubblica_ig.py post post/2026-11-10 https://…/2026-11-10
+                                        il post del giorno di post_ig.py, come carosello con didascalia.txt
     python pubblica_ig.py cancella ID…  toglie da Instagram le storie con quegli id (sono nel log di ogni giro)
 Usa solo la libreria standard, più Pillow per i JPG.
 """
@@ -131,6 +133,26 @@ def pubblica(cartella, base, solo_prima=False):
     print(f"{len(immagini)} storie pubblicate")
 
 
+def pubblica_post(cartella, base):
+    """Il post del giorno di post_ig.py: un carosello coi JPG in ordine e la didascalia di didascalia.txt."""
+    ig, nome = account()
+    print(f"pubblico il post come @{nome}")
+    dove = cartella / "jpg" if (cartella / "jpg").is_dir() else cartella
+    immagini = sorted(dove.glob("*.jpg"))[:10]   # un carosello ne tiene al massimo 10
+    if len(immagini) < 2:
+        sys.exit(f"servono almeno 2 JPG in {dove} per un carosello")
+    figli = []
+    for f in immagini:
+        figlio = chiama("POST", f"{ig}/media", image_url=f"{base.rstrip('/')}/{f.name}", is_carousel_item="true")["id"]
+        aspetta_pronto(figlio)
+        figli.append(figlio)
+    testo = (cartella / "didascalia.txt").read_text(encoding="utf-8")
+    carosello = chiama("POST", f"{ig}/media", media_type="CAROUSEL", children=",".join(figli), caption=testo)["id"]
+    aspetta_pronto(carosello)
+    post = chiama("POST", f"{ig}/media_publish", creation_id=carosello)
+    print(f"post {post.get('id')} pubblicato ({len(figli)} schermate)")
+
+
 def cancella(ids):
     """Toglie da Instagram le storie (o i post) con questi id: quelli che pubblica() scrive nel log."""
     ig, nome = account()
@@ -151,7 +173,7 @@ def main():
         return verifica()
     if len(sys.argv) >= 3 and sys.argv[1] == "cancella":
         return cancella(sys.argv[2:])
-    if len(sys.argv) < 3 or sys.argv[1] not in ("jpg", "pubblica"):
+    if len(sys.argv) < 3 or sys.argv[1] not in ("jpg", "pubblica", "post"):
         sys.exit(__doc__)
     cartella = Path(sys.argv[2])
     if sys.argv[1] == "jpg":
@@ -159,7 +181,10 @@ def main():
     else:
         if not os.environ.get("INSTAGRAM_TOKEN"):
             sys.exit("manca INSTAGRAM_TOKEN (segreto del repo su GitHub)")
-        pubblica(cartella, sys.argv[3], solo_prima="--solo-prima" in sys.argv)
+        if sys.argv[1] == "post":
+            pubblica_post(cartella, sys.argv[3])
+        else:
+            pubblica(cartella, sys.argv[3], solo_prima="--solo-prima" in sys.argv)
 
 
 if __name__ == "__main__":

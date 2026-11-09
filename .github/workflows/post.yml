@@ -1,0 +1,72 @@
+# Il post di ogni giorno su Instagram (@nodus.it) alle 18:00 italiane: post_ig.py sceglie le 3 notizie e la parola
+# del giorno e disegna il carosello, pubblica_ig.py lo pubblica. Chi lo fa partire alle 18 in punto è cron-job.org
+# (workflow_dispatch con prova=false); le pianificazioni qui sotto sono la riserva, perché GitHub le salta o le
+# ritarda. post_ig.py --auto fa il post una volta sola al giorno: gli altri tentativi non fanno niente.
+# Le immagini vanno online sul ramo post-ig (rifatto da zero a ogni post) perché Instagram le scarica da lì.
+name: Post Instagram
+
+on:
+  schedule:
+    - cron: "7,27,47 16-20 * * *"   # dalle 18:00, ora solare e legale
+  workflow_dispatch:
+    inputs:
+      prova:
+        description: "Prova: fa e mette online le schermate, ma non pubblica su Instagram"
+        type: boolean
+        default: true
+
+concurrency:
+  group: post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # per il ramo post-ig con le immagini
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # il registro dei giorni fatti e delle parole già uscite passa da un giorno all'altro
+      - uses: actions/cache/restore@v4
+        with:
+          path: post/usate.json
+          key: post-${{ github.run_id }}
+          restore-keys: post-
+      - name: Scegli le notizie e la parola, disegna le schermate
+        id: post
+        run: |
+          python post_ig.py --auto --dati https://buildtech26.github.io/radar/dati.json ${{ inputs.prova && '--prova' || '' }}
+      - name: Salva il registro
+        if: always() && !inputs.prova
+        uses: actions/cache/save@v4
+        with:
+          path: post/usate.json
+          key: post-${{ github.run_id }}
+      - name: Metti online le immagini
+        if: steps.post.outputs.cartella
+        run: |
+          pip install --quiet pillow==12.0.0
+          python pubblica_ig.py jpg "${{ steps.post.outputs.cartella }}"
+          mkdir -p /tmp/ig/${{ steps.post.outputs.nome }}
+          cp "${{ steps.post.outputs.cartella }}"/jpg/*.jpg /tmp/ig/${{ steps.post.outputs.nome }}/
+          cp "${{ steps.post.outputs.cartella }}"/didascalia.txt "${{ steps.post.outputs.cartella }}"/notizie.txt /tmp/ig/${{ steps.post.outputs.nome }}/
+          cd /tmp/ig
+          git init -q -b post-ig
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -q -m "Post ${{ steps.post.outputs.nome }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" post-ig
+          sleep 10   # il tempo che gli indirizzi raw si accorgano del ramo nuovo
+          echo "Immagini: https://raw.githubusercontent.com/${{ github.repository }}/post-ig/${{ steps.post.outputs.nome }}/"
+      - name: Pubblica su Instagram
+        if: steps.post.outputs.cartella && !inputs.prova
+        run: |
+          python pubblica_ig.py post "${{ steps.post.outputs.cartella }}" \
+            "https://raw.githubusercontent.com/${{ github.repository }}/post-ig/${{ steps.post.outputs.nome }}"
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_ID: ${{ vars.INSTAGRAM_ID }}

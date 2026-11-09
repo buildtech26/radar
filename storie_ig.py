@@ -276,8 +276,9 @@ def chrome():
     sys.exit("Chrome non trovato: indica il percorso in RADAR_CHROME")
 
 
-def fotografa(pagine, cartella):
-    """Ogni pagina HTML → PNG 1080×1920 con Chrome senza finestra (profilo a parte: non tocca il Chrome aperto)."""
+def fotografa(pagine, cartella, alto=1920):
+    """Ogni pagina HTML → PNG 1080×alto (1920 le storie, 1350 i post di post_ig.py) con Chrome senza finestra
+    (profilo a parte: non tocca il Chrome aperto)."""
     exe = chrome()
     # su GitHub (Ubuntu 24.04) la sandbox di Chrome non parte; le pagine sono nostre, col testo esterno già escapato
     extra = ["--no-sandbox"] if os.environ.get("CI") else []
@@ -288,7 +289,7 @@ def fotografa(pagine, cartella):
             png = cartella / f"{i:02}.png"
             subprocess.run([exe, *extra, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
                             f"--user-data-dir={Path(tmp) / 'profilo'}", "--force-device-scale-factor=1",
-                            "--window-size=1080,1920", "--virtual-time-budget=6000", "--allow-file-access-from-files",
+                            f"--window-size=1080,{alto}", "--virtual-time-budget=6000", "--allow-file-access-from-files",
                             f"--screenshot={png}", f.as_uri()], check=True, capture_output=True, timeout=90)
 
 
