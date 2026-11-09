@@ -6,10 +6,13 @@
 name: Storie Instagram
 
 on:
+  # GitHub salta o ritarda di ore le pianificazioni (il 09/11 la mattina non è mai partita, il pranzo alle
+  # 15:08): tanti tentativi a minuti dispari dall'orario in poi, il primo che arriva fa il giro, gli altri
+  # trovano il giro già fatto e finiscono in pochi secondi.
   schedule:
-    - cron: "30 5,6 * * *"    # 7:30
-    - cron: "0 11,12 * * *"   # 13:00
-    - cron: "30 17,18 * * *"  # 19:30
+    - cron: "17,37,57 5-8 * * *"     # mattina, dalle 7:30
+    - cron: "17,37,57 10-13 * * *"   # pranzo, dalle 13:00
+    - cron: "17,37,57 16-19 * * *"   # sera, dalle 19:30
   workflow_dispatch:
     inputs:
       giro:
