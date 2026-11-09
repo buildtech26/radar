@@ -21,6 +21,10 @@ on:
         description: "Prova: fa e mette online le schermate, ma non pubblica su Instagram"
         type: boolean
         default: true
+      una:
+        description: "Storia di prova: pubblica davvero solo la prima schermata e non segna il giro come fatto"
+        type: boolean
+        default: false
 
 concurrency:
   group: storie
@@ -46,9 +50,9 @@ jobs:
         id: storie
         run: |
           python storie_ig.py --auto --dati https://buildtech26.github.io/radar/dati.json \
-            ${{ inputs.giro && format('--giro {0}', inputs.giro) || '' }} ${{ inputs.prova && '--prova' || '' }}
+            ${{ inputs.giro && format('--giro {0}', inputs.giro) || '' }} ${{ (inputs.prova || inputs.una) && '--prova' || '' }}
       - name: Salva il registro
-        if: always() && !inputs.prova
+        if: always() && !inputs.prova && !inputs.una
         uses: actions/cache/save@v4
         with:
           path: storie/usate.json
@@ -77,10 +81,11 @@ jobs:
           INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
           INSTAGRAM_ID: ${{ vars.INSTAGRAM_ID }}
       - name: Pubblica su Instagram
-        if: steps.storie.outputs.cartella && !inputs.prova
+        if: steps.storie.outputs.cartella && (!inputs.prova || inputs.una)
         run: |
           python pubblica_ig.py pubblica "${{ steps.storie.outputs.cartella }}" \
-            "https://raw.githubusercontent.com/${{ github.repository }}/storie-ig/${{ steps.storie.outputs.nome }}"
+            "https://raw.githubusercontent.com/${{ github.repository }}/storie-ig/${{ steps.storie.outputs.nome }}" \
+            ${{ inputs.una && '--solo-prima' || '' }}
         env:
           INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
           INSTAGRAM_ID: ${{ vars.INSTAGRAM_ID }}

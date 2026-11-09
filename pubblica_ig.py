@@ -113,11 +113,11 @@ def account():
     return scelto["id"], scelto.get("username")
 
 
-def pubblica(cartella, base):
+def pubblica(cartella, base, solo_prima=False):
     ig, nome = account()
     io = {"user_id": ig}
     print(f"pubblico come @{nome}")
-    immagini = sorted((cartella / "jpg").glob("*.jpg"))
+    immagini = sorted((cartella / "jpg").glob("*.jpg"))[:1 if solo_prima else None]
     if not immagini:
         sys.exit(f"nessun JPG in {cartella / 'jpg'}: prima `jpg`")
     for f in immagini:   # in ordine: le storie si vedono nell'ordine in cui escono
@@ -146,7 +146,7 @@ def main():
     else:
         if not os.environ.get("INSTAGRAM_TOKEN"):
             sys.exit("manca INSTAGRAM_TOKEN (segreto del repo su GitHub)")
-        pubblica(cartella, sys.argv[3])
+        pubblica(cartella, sys.argv[3], solo_prima="--solo-prima" in sys.argv)
 
 
 if __name__ == "__main__":
