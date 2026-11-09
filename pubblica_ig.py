@@ -123,7 +123,23 @@ def pubblica(cartella, base):
     print(f"{len(immagini)} storie pubblicate")
 
 
+def verifica():
+    """Controlla il token senza pubblicare niente: dice con quale strada funziona e su quale account."""
+    for host, percorso, campi in (("https://graph.instagram.com", "me", "user_id,username"),
+                                  ("https://graph.facebook.com", "me", "id,name"),
+                                  ("https://graph.facebook.com", "me/accounts", "name,instagram_business_account{id,username}")):
+        HOST["api"] = host
+        try:
+            print(f"{host}/{percorso}: {json.dumps(chiama('GET', percorso, esci=False, fields=campi))}")
+        except ErroreApi as e:
+            print(f"{host}/{percorso}: {e}")
+    ig, nome = account()
+    print(f"OK: si pubblicherebbe su @{nome} (id {ig}) via {api()}")
+
+
 def main():
+    if len(sys.argv) >= 2 and sys.argv[1] == "verifica":
+        return verifica()
     if len(sys.argv) < 3 or sys.argv[1] not in ("jpg", "pubblica"):
         sys.exit(__doc__)
     cartella = Path(sys.argv[2])

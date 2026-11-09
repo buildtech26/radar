@@ -70,6 +70,12 @@ jobs:
           git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" storie-ig
           sleep 10   # il tempo che gli indirizzi raw si accorgano del ramo nuovo
           echo "Immagini: https://raw.githubusercontent.com/${{ github.repository }}/storie-ig/${{ steps.storie.outputs.nome }}/"
+      - name: Controlla il token (in prova, senza pubblicare)
+        if: inputs.prova
+        run: python pubblica_ig.py verifica
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_ID: ${{ vars.INSTAGRAM_ID }}
       - name: Pubblica su Instagram
         if: steps.storie.outputs.cartella && !inputs.prova
         run: |
