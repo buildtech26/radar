@@ -175,9 +175,12 @@ pubblica`), una storia per schermata. L'adesivo col link non si può mettere dal
 "Link nella bio". Da Actions → Storie Instagram → Run workflow si fa un giro a mano; con "Prova" acceso fa e mette
 online le schermate senza pubblicare.
 
-Il token sta nel segreto `INSTAGRAM_TOKEN` del repo e **dura 60 giorni**: quando scade il giro fallisce (GitHub
-manda una mail) e va rifatto da developers.facebook.com → l'app → Instagram → Configurazione dell'API con login
-di Instagram → Genera token, poi incollato di nuovo nel segreto.
+Il token sta nel segreto `INSTAGRAM_TOKEN` del repo: è un token dell'utente di sistema del login unificato (app
+"Nodus storie" su developers.facebook.com, portfolio business Nodus, 09/11/2026) e **non scade**. L'account si
+trova da solo (`me/assigned_instagram_accounts` su graph.facebook.com: @nodus.it, id 17841411604486495). Se il
+token si rompe il giro fallisce e GitHub manda una mail: si rigenera da l'app → Instagram → Configurazione
+dell'API con il login unificato → Genera token. `python pubblica_ig.py verifica` (o il giro di prova) controlla il
+token senza pubblicare.
 
 ## Traduzioni
 

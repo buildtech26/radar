@@ -8,7 +8,8 @@
 
 Gira su GitHub Actions (.github/workflows/storie.yml), scelta di Mattia del 09/11/2026: API di Instagram
 diretta, gratis, senza passo di approvazione. Il token sta nel segreto INSTAGRAM_TOKEN del repo (mai nel
-codice né nei log). È un token lungo: dura 60 giorni, poi va rifatto (vedi README, "Storie Instagram").
+codice né nei log): token dell'utente di sistema del login unificato, non scade (vedi README, "Storie Instagram").
+    python pubblica_ig.py verifica      controlla il token e l'account senza pubblicare niente
 Usa solo la libreria standard, più Pillow per i JPG.
 """
 import json
