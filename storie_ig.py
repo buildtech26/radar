@@ -237,7 +237,7 @@ def copertina(scelte, oggi):
                   f'<div class="avanti">Tocca per andare avanti →</div>')
 
 
-def schermata(c, i, quante, etichetta, loghi):
+def schermata(c, loghi):
     n = c["n"]
     nome, colore, _ = SEZIONI[n["sezione"]]
     lung = len(c["titolo"])
@@ -250,7 +250,7 @@ def schermata(c, i, quante, etichetta, loghi):
     cifra_html = f'<div class="cifra" style="color:{colore}">{e(c["cifra"])}</div>' if c["cifra"] else ""
     return pagina(
         f'<div class="testa">{icona(n["sezione"], 96)}<span class="sez" style="color:{colore}">{nome}</span>'
-        f'<span class="conta">{e(etichetta)}{i} di {quante}</span></div>{cifra_html}'
+        f'</div>{cifra_html}'   # niente "Novità delle 19:30 · 1 di 3" in alto a destra (tolto da Mattia il 09/11)
         f'<h2 style="margin-top:{96 if c["cifra"] else 140}px;font-size:{grande}px">{e(c["titolo"])}</h2>'
         f'<p class="testo" style="-webkit-line-clamp:{righe}">{e(c["testo"])}</p>'
         f'<div class="piede">{fonte}{MARCHIO}</div>')
@@ -263,8 +263,7 @@ def chiusura():
                   'In cima quelle sui temi che scegli tu, e le parole difficili spiegate semplici.</p>'
                   # l'adesivo col link non si può mettere dall'API di Instagram: il link sta nella bio
                   f'<div class="link"><div class="bio">Link nella bio<span>{PROFILO}</span></div>'
-                  '<span style="font-size:34px;font-weight:600">È gratis</span></div>'
-                  '<p class="nota">Nodus serve a informarti: non è consulenza finanziaria.</p>')
+                  '<span style="font-size:34px;font-weight:600">È gratis</span></div>')
 
 
 def chrome():
@@ -356,9 +355,8 @@ def main():
         return
 
     loghi = {f["nome"]: (QUI / "sito" / f["logo"]).as_uri() for f in dati["fonti"] if f.get("logo")}
-    etichetta = "" if giro == "mattina" else f"Novità delle {GIRI[giro]} · "
     pagine = [copertina(scelte, oggi)] if giro == "mattina" else []
-    pagine += [schermata(c, i, len(scelte), etichetta, loghi) for i, c in enumerate(scelte, 1)]
+    pagine += [schermata(c, loghi) for c in scelte]
     if giro != "pranzo":
         pagine.append(chiusura())
 
