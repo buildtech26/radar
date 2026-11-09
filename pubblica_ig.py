@@ -20,10 +20,14 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-API = "https://graph.instagram.com"
+def api():
+    """Due strade per il token, stesse chiamate: col login di Instagram (comincia con IG) si parla con
+    graph.instagram.com, col login di Facebook (comincia con EAA) con graph.facebook.com."""
+    return "https://graph.instagram.com" if os.environ["INSTAGRAM_TOKEN"].startswith("IG") else "https://graph.facebook.com"
 
 
 def chiama(metodo, percorso, **parametri):
+    API = api()
     parametri["access_token"] = os.environ["INSTAGRAM_TOKEN"]
     dati = urllib.parse.urlencode(parametri)
     if metodo == "GET":
@@ -64,9 +68,24 @@ def aspetta_pronto(contenitore):
     sys.exit("Instagram non ha finito di caricare l'immagine in 2 minuti")
 
 
+def account():
+    """L'id dell'account Instagram che pubblica e il suo nome."""
+    if "graph.instagram.com" in api():
+        io = chiama("GET", "me", fields="user_id,username")
+        return io["user_id"], io.get("username")
+    # login di Facebook: l'account Instagram è quello collegato a una delle pagine Facebook del token
+    pagine = chiama("GET", "me/accounts", fields="instagram_business_account{id,username}").get("data", [])
+    collegati = [p["instagram_business_account"] for p in pagine if p.get("instagram_business_account")]
+    scelto = next((a for a in collegati if a.get("username") == "nodus.it"), collegati[0] if collegati else None)
+    if not scelto:
+        sys.exit("nessun account Instagram collegato alle pagine Facebook di questo token")
+    return scelto["id"], scelto.get("username")
+
+
 def pubblica(cartella, base):
-    io = chiama("GET", "me", fields="user_id,username")
-    print(f"pubblico come @{io.get('username')}")
+    ig, nome = account()
+    io = {"user_id": ig}
+    print(f"pubblico come @{nome}")
     immagini = sorted((cartella / "jpg").glob("*.jpg"))
     if not immagini:
         sys.exit(f"nessun JPG in {cartella / 'jpg'}: prima `jpg`")
