@@ -20,13 +20,21 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+class ErroreApi(Exception):
+    pass
+
+
+# Due strade per il token, stesse chiamate: col login di Instagram ("login unificato" nel pannello di Meta) si
+# parla con graph.instagram.com, col login di Facebook con graph.facebook.com. account() prova la prima e, se il
+# token non è di quel tipo, la seconda.
+HOST = {"api": "https://graph.instagram.com"}
+
+
 def api():
-    """Due strade per il token, stesse chiamate: col login di Instagram (comincia con IG) si parla con
-    graph.instagram.com, col login di Facebook (comincia con EAA) con graph.facebook.com."""
-    return "https://graph.instagram.com" if os.environ["INSTAGRAM_TOKEN"].startswith("IG") else "https://graph.facebook.com"
+    return HOST["api"]
 
 
-def chiama(metodo, percorso, **parametri):
+def chiama(metodo, percorso, esci=True, **parametri):
     API = api()
     parametri["access_token"] = os.environ["INSTAGRAM_TOKEN"]
     dati = urllib.parse.urlencode(parametri)
@@ -43,8 +51,11 @@ def chiama(metodo, percorso, **parametri):
             errore = json.loads(e.read().decode("utf-8")).get("error", {})
         except ValueError:
             errore = {}
-        sys.exit(f"Instagram ha risposto {e.code} su {percorso}: {errore.get('message', '?')} "
+        testo = (f"Instagram ha risposto {e.code} su {percorso}: {errore.get('message', '?')} "
                  f"(tipo {errore.get('type', '?')}, codice {errore.get('code', '?')})")
+        if not esci:
+            raise ErroreApi(testo)
+        sys.exit(testo)
 
 
 def jpg(cartella):
@@ -70,9 +81,12 @@ def aspetta_pronto(contenitore):
 
 def account():
     """L'id dell'account Instagram che pubblica e il suo nome."""
-    if "graph.instagram.com" in api():
-        io = chiama("GET", "me", fields="user_id,username")
+    try:
+        io = chiama("GET", "me", esci=False, fields="user_id,username")
         return io["user_id"], io.get("username")
+    except ErroreApi as e:
+        print(f"col login di Instagram no ({e}), provo col login di Facebook")
+    HOST["api"] = "https://graph.facebook.com"
     # login di Facebook: l'account Instagram è quello collegato a una delle pagine Facebook del token
     pagine = chiama("GET", "me/accounts", fields="instagram_business_account{id,username}").get("data", [])
     collegati = [p["instagram_business_account"] for p in pagine if p.get("instagram_business_account")]
