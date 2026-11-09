@@ -127,7 +127,11 @@ def verifica():
     """Controlla il token senza pubblicare niente: dice con quale strada funziona e su quale account."""
     for host, percorso, campi in (("https://graph.instagram.com", "me", "user_id,username"),
                                   ("https://graph.facebook.com", "me", "id,name"),
-                                  ("https://graph.facebook.com", "me/accounts", "name,instagram_business_account{id,username}")):
+                                  ("https://graph.facebook.com", "me/accounts", "name,instagram_business_account{id,username}"),
+                                  ("https://graph.facebook.com", "me", "id"),
+                                  ("https://graph.facebook.com", "me/businesses", "id,name"),
+                                  ("https://graph.facebook.com", "me/instagram_accounts", "id,username"),
+                                  ("https://graph.facebook.com", "me/assigned_instagram_accounts", "id,username")):
         HOST["api"] = host
         try:
             print(f"{host}/{percorso}: {json.dumps(chiama('GET', percorso, esci=False, fields=campi))}")
