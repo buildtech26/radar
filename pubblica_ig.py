@@ -98,6 +98,11 @@ def account():
     except ErroreApi as e:
         print(f"col login di Instagram no ({e}), provo col login di Facebook")
     HOST["api"] = "https://graph.facebook.com"
+    # login unificato (token dell'utente di sistema, quello che usiamo dal 09/11/2026): gli account assegnati
+    assegnati = chiama("GET", "me/assigned_instagram_accounts", fields="id,username").get("data", [])
+    scelto = next((a for a in assegnati if a.get("username") == "nodus.it"), assegnati[0] if assegnati else None)
+    if scelto:
+        return scelto["id"], scelto.get("username")
     # login di Facebook: l'account Instagram è quello collegato a una delle pagine Facebook del token
     pagine = chiama("GET", "me/accounts", fields="instagram_business_account{id,username}").get("data", [])
     collegati = [p["instagram_business_account"] for p in pagine if p.get("instagram_business_account")]
@@ -125,18 +130,6 @@ def pubblica(cartella, base):
 
 def verifica():
     """Controlla il token senza pubblicare niente: dice con quale strada funziona e su quale account."""
-    for host, percorso, campi in (("https://graph.instagram.com", "me", "user_id,username"),
-                                  ("https://graph.facebook.com", "me", "id,name"),
-                                  ("https://graph.facebook.com", "me/accounts", "name,instagram_business_account{id,username}"),
-                                  ("https://graph.facebook.com", "me", "id"),
-                                  ("https://graph.facebook.com", "me/businesses", "id,name"),
-                                  ("https://graph.facebook.com", "me/instagram_accounts", "id,username"),
-                                  ("https://graph.facebook.com", "me/assigned_instagram_accounts", "id,username")):
-        HOST["api"] = host
-        try:
-            print(f"{host}/{percorso}: {json.dumps(chiama('GET', percorso, esci=False, fields=campi))}")
-        except ErroreApi as e:
-            print(f"{host}/{percorso}: {e}")
     ig, nome = account()
     print(f"OK: si pubblicherebbe su @{nome} (id {ig}) via {api()}")
 
