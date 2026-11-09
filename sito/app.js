@@ -1415,23 +1415,52 @@ function vistaPerTe() {
   return parti;
 }
 
+let spiaNotizie = null;   // l'osservatore che aggiunge le notizie mentre scorri (vistaNotizie)
+
 function vistaNotizie() {
   const input = h("input", { type: "search", placeholder: L("Cerca nelle notizie", "Search the news"), "aria-label": L("Cerca nelle notizie", "Search the news"), value: S.cerca, enterkeyhint: "search" });
   const lista = h("div", {});
+  // Le notizie della settimana sono centinaia: disegnarle tutte insieme bloccava il telefono per secondi (e il
+  // browser dentro Instagram a volte non ce la faceva). Se ne disegnano BLOCCO alla volta, e le altre arrivano
+  // mentre scorri, un po' prima che servano.
+  const BLOCCO = 30;
+  spiaNotizie?.disconnect();   // quella della lista di prima, se c'era
   const riempi = () => {
+    spiaNotizie?.disconnect();
     const q = S.cerca.trim().toLowerCase();
     let voci = visibili();
     voci = q ? voci.filter((n) => conAltre(n).some((x) => (x.titolo + " " + x.sommario + " " + x.fonte).toLowerCase().includes(q))) : S.sezione === "tutto" ? voci : voci.filter((n) => n.sezione === S.sezione);
     voci.sort((a, b) => (b.data || 0) - (a.data || 0));
     if (!voci.length) { lista.replaceChildren(h("div", { class: "vuoto" }, icona("lente"), h("strong", {}, q ? L("Nessun risultato", "No results") : L("Niente qui", "Nothing here")), q ? L(`Niente su «${S.cerca.trim()}» negli ultimi giorni.`, `Nothing about “${S.cerca.trim()}” in the last few days.`) : "")); return; }
-    const gruppi = [];
-    let giorno = null, corrente = null;
-    for (const n of voci) {
-      const g = n.data ? etichettaGiorno(n.data) : L("Senza data", "No date");
-      if (g !== giorno) { giorno = g; corrente = h("div", { class: "lista" }); gruppi.push(h("h3", { class: "giorno" }, g), corrente); }
-      corrente.append(scheda(n, { temi: valuta(n).temi }));
+    let giorno = null, corrente = null, fatte = 0;
+    const fondo = h("div", { class: "fondo-lista" });
+    lista.replaceChildren(fondo);
+    const altre = () => {
+      const pezzi = [];
+      for (const n of voci.slice(fatte, fatte + BLOCCO)) {
+        const g = n.data ? etichettaGiorno(n.data) : L("Senza data", "No date");
+        if (g !== giorno) { giorno = g; corrente = h("div", { class: "lista" }); pezzi.push(h("h3", { class: "giorno" }, g), corrente); }
+        corrente.append(scheda(n, { temi: valuta(n).temi }));
+      }
+      fatte = Math.min(voci.length, fatte + BLOCCO);
+      fondo.before(...pezzi);
+      if (fatte >= voci.length) {
+        spiaNotizie?.disconnect();
+        fondo.replaceChildren(h("p", { class: "fine-lista" }, L(`${voci.length} notizie degli ultimi 7 giorni`, `${voci.length} stories from the last 7 days`)));
+      }
+    };
+    altre();
+    if (fatte < voci.length) {
+      const spia = new IntersectionObserver((v) => {
+        if (!v.some((x) => x.isIntersecting) || !fondo.isConnected) return;
+        altre();
+        // se il fondo è ancora in vista (schermo alto, scorrimento veloce) l'osservatore non lo ridirebbe: si
+        // ricomincia a osservarlo, così riparte subito col blocco dopo
+        if (fatte < voci.length) { spia.unobserve(fondo); spia.observe(fondo); }
+      }, { rootMargin: "0px 0px 1500px 0px" });
+      spia.observe(fondo);
+      spiaNotizie = spia;
     }
-    lista.replaceChildren(...gruppi, h("p", { class: "fine-lista" }, L(`${voci.length} notizie degli ultimi 7 giorni`, `${voci.length} stories from the last 7 days`)));
   };
   input.addEventListener("input", () => { S.cerca = input.value; seg.style.opacity = S.cerca.trim() ? 0.4 : 1; riempi(); });
   // "Tutto" in testa: tutte le sezioni scelte, mischiate per ora (con una sezione sola non serve)
@@ -2504,6 +2533,7 @@ function disegna({ nuova = false } = {}) {
   if (!S.dati) return;
   const [fn, nomeVista] = VISTE[S.vista];
   const titolo = nomeVista();
+  spiaNotizie?.disconnect();   // la lista di Notizie che si allunga scorrendo: se c'era, non serve più
   main.replaceChildren(...fn());
   $("#barra-titolo").textContent = titolo;
   document.title = S.vista === "per-te" ? "Nodus" : `${titolo} · Nodus`;
