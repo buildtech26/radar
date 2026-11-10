@@ -59,6 +59,10 @@ const ICONE = {
   spunta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   radar: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="24" cy="24" r="19"/><circle cx="24" cy="24" r="11.5" opacity=".55"/><circle cx="24" cy="24" r="3.2" fill="currentColor" stroke="none"/><path d="M24 24L37 11"/></svg>',
   chiudi: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  // le righe della scheda Tu
+  mondo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 2.6 14.6 0 17M12 3.5c-2.6 2.4-2.6 14.6 0 17"/></svg>',
+  giornale: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5.5h11v13H7a2 2 0 0 1-2-2z"/><path d="M16 9h3v7.5a2 2 0 0 1-2 2"/><path d="M8 9h5M8 12.5h5"/></svg>',
+  luna: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/></svg>',
   // il simbolo di ogni sezione (cerchi delle storie): gli stessi del widget
   sFinanza: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 17.5l5-5.5 4 3.5 7.5-8.5"/><path d="M15.5 7h4.5v4.5"/></svg>',
   sEconomia: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.5L12 4l8.5 5.5z"/><path d="M4.5 20h15"/><path d="M6.5 12v5.5M10 12v5.5M14 12v5.5M17.5 12v5.5"/></svg>',
@@ -140,9 +144,10 @@ function velocitaDa(storia, adesso) {
 //   sezioni: { finanza, economia, ai, tech, scienza: true/false } le sezioni da vedere; null = tutte. Una sezione
 //          che non c'è (nata dopo) vale accesa. Le spente spariscono da Notizie e Per te, e i loro temi non contano.
 //   interfaccia: "it" | "en", la lingua dell'app; null = la decide il browser (vedi lingua.js)
+//   seguite: ["Il Post", "ANSA"] le testate seguite (il nome senza la parte dopo " · "); null = nessuna
 function nuovoProfilo() {
   // notifiche: un tema per sezione, { finanza: "etf", ai: "anthropic" } (vedi pannelloNotifiche)
-  return { versione: 1, nome: "", temi: null, mercati: null, mio: null, paesi: null, sezioni: null, interfaccia: null, notifiche: null, fatto: false };
+  return { versione: 1, nome: "", temi: null, mercati: null, mio: null, paesi: null, sezioni: null, interfaccia: null, notifiche: null, seguite: null, fatto: false };
 }
 // I profili di prima avevano "lingue" ({ it, en }) al posto dei paesi: chi aveva già fatto le sue scelte tiene
 // tutto quello che vedeva (l'inglese acceso = Europa, Stati Uniti e Regno Unito).
@@ -178,6 +183,7 @@ const S = {
   caricato: 0,
   vista: "per-te",
   sezione: mem.get("sezione", "tutto"),
+  soloSeguite: mem.get("soloSeguite", false),   // in Notizie: solo le testate seguite (solo questo dispositivo)
   periodo: mem.get("periodo", 90),
   filtroAgenda: "tutti",
   cerca: "",
@@ -224,6 +230,17 @@ function paeseDi(n) {
 }
 // le testate di un paese, una volta sola ("Il Sole 24 Ore · Finanza" e "· Economia" → "Il Sole 24 Ore")
 const fontiDi = (paese) => [...new Set((S.dati?.fonti || []).filter((f) => (f.paese || (f.lingua === "it" ? "it" : "us")) === paese).map((f) => f.nome.split(" · ")[0]))];
+
+// le testate seguite (S.profilo.seguite): le loro notizie passano anche se il paese è spento (il "Segui" è la
+// scelta più precisa, deciso da Mattia il 10/11/2026), salgono in Per te e hanno il loro filtro in Notizie
+const testata = (n) => n.fonte.split(" · ")[0];
+const segue = (n) => !!S.profilo.seguite?.includes(testata(n));
+function alternaSeguita(nome) {
+  const s = new Set(S.profilo.seguite || []);
+  s.has(nome) ? s.delete(nome) : s.add(nome);
+  S.profilo.seguite = [...s];
+  salvaProfilo();
+}
 
 // le sezioni da vedere (vedi il profilo): sempre almeno una
 function sezioniScelte() {
@@ -360,7 +377,7 @@ const preferita = (a, b) => (b.lingua === lingua()) - (a.lingua === lingua()) ||
 
 function visibili() {
   const paesi = paesiScelti(), sezioni = sezioniScelte();
-  const passa = (n) => paesi.has(paeseDi(n)) && sezioni.has(n.sezione) && !S.nascoste.has(n.id) && !(S.reNascondi && S.reNascondi.test(n.titolo));
+  const passa = (n) => (paesi.has(paeseDi(n)) || segue(n)) && sezioni.has(n.sezione) && !S.nascoste.has(n.id) && !(S.reNascondi && S.reNascondi.test(n.titolo));
   const gruppi = new Map(), via = new Set();
   for (const n of S.dati.notizie) {
     if (!n.gruppo) continue;
@@ -372,7 +389,7 @@ function visibili() {
     if (!n.gruppo) { if (passa(n)) lista.push(n); continue; }
     if (via.has(n.gruppo) || fatti.has(n.gruppo) || !gruppi.has(n.gruppo)) continue;
     fatti.add(n.gruppo);
-    const [prima, ...altre] = gruppi.get(n.gruppo).sort(preferita);
+    const [prima, ...altre] = gruppi.get(n.gruppo).sort((a, b) => segue(b) - segue(a) || preferita(a, b));   // prima la testata seguita
     prima.altre = altre;
     lista.push(prima);
   }
@@ -382,13 +399,13 @@ const conAltre = (n) => [n, ...(n.altre || [])];
 
 function sceltePerTe(max = 25) {
   const candidate = visibili()
-    .map((n) => ({ n, v: valuta(n) }))
-    .filter((x) => x.v.p > 0)
-    .map((x) => ({ ...x, r: x.v.p * Math.pow(0.5, oreDa(x.n) / 18) }))   // un punto perde metà valore ogni 18 ore
+    .map((n) => ({ n, v: valuta(n), s: segue(n) }))
+    .filter((x) => x.v.p > 0 || x.s)   // le testate seguite entrano anche senza un tema (valgono un punto)
+    .map((x) => ({ ...x, r: (x.v.p || 1) * (x.s ? 1.5 : 1) * Math.pow(0.5, oreDa(x.n) / 18) }))   // un punto perde metà valore ogni 18 ore
     .sort((a, b) => b.r - a.r);
   const perFonte = {}, scelte = [];
   for (const x of candidate) {
-    if ((perFonte[x.n.fonte] = (perFonte[x.n.fonte] || 0) + 1) > 3) continue;   // varietà: massimo 3 per fonte
+    if ((perFonte[x.n.fonte] = (perFonte[x.n.fonte] || 0) + 1) > (x.s ? 6 : 3)) continue;   // varietà: massimo 3 per fonte, 6 se la segui
     scelte.push(x.n);
     if (scelte.length >= max) break;
   }
@@ -819,12 +836,33 @@ function apriNotizia(n, art) {
     img.addEventListener("error", () => img.remove());
     box.append(img);
   }
+  // segui la testata: le sue notizie salgono in Per te e hanno il filtro in Notizie
+  let seguiCambiato = false;
+  const bSegui = h("button", { type: "button", class: "segui premibile" });
+  const disegnaSegui = () => {
+    const on = segue(n);
+    bSegui.setAttribute("aria-pressed", String(on));
+    bSegui.setAttribute("aria-label", on ? L(`Segui già ${testata(n)}: tocca per smettere`, `Following ${testata(n)}: tap to unfollow`) : L(`Segui ${testata(n)}`, `Follow ${testata(n)}`));
+    bSegui.replaceChildren(...(on ? [icona("spunta"), L("Seguita", "Following")] : [L("Segui", "Follow")]));
+  };
+  bSegui.addEventListener("click", () => {
+    alternaSeguita(testata(n));
+    if (!seguiCambiato) {   // alla chiusura si ridisegna la vista sotto, senza perdere quello che il foglio doveva già fare
+      seguiCambiato = true;
+      const prima = F.allaChiusura;
+      F.allaChiusura = () => { prima && prima(); disegna(); };
+    }
+    disegnaSegui();
+    mostraAvviso(segue(n) ? L(`Segui ${testata(n)}: la gestisci in Il tuo Nodus → Tu`, `Following ${testata(n)}: manage it in Your Nodus → You`) : L(`Non segui più ${testata(n)}`, `Unfollowed ${testata(n)}`));
+  });
+  disegnaSegui();
   box.append(
     h("div", { class: "card-testa" },
       marchio(n),
       h("span", { class: "fonte" }, n.fonte),
       n.data ? [h("span", { "aria-hidden": "true" }, "·"), h("time", { datetime: new Date(n.data).toISOString() }, quandoFrase(n.data))] : null,
-      n.lingua !== lingua() ? h("span", { class: "etichetta", title: nomeLingua(n.lingua) }, n.lingua.toUpperCase()) : null),
+      n.lingua !== lingua() ? h("span", { class: "etichetta", title: nomeLingua(n.lingua) }, n.lingua.toUpperCase()) : null,
+      bSegui),
     zonaTitolo);
 
   // il testo intero che manda la testata (fino a ~700 caratteri), se c'è; le salvate lo ritrovano tra le notizie di oggi
@@ -1430,6 +1468,7 @@ function vistaNotizie() {
     const q = S.cerca.trim().toLowerCase();
     let voci = visibili();
     voci = q ? voci.filter((n) => conAltre(n).some((x) => (x.titolo + " " + x.sommario + " " + x.fonte).toLowerCase().includes(q))) : S.sezione === "tutto" ? voci : voci.filter((n) => n.sezione === S.sezione);
+    if (!q && S.soloSeguite && S.profilo.seguite?.length) voci = voci.filter(segue);
     voci.sort((a, b) => (b.data || 0) - (a.data || 0));
     if (!voci.length) { lista.replaceChildren(h("div", { class: "vuoto" }, icona("lente"), h("strong", {}, q ? L("Nessun risultato", "No results") : L("Niente qui", "Nothing here")), q ? L(`Niente su «${S.cerca.trim()}» negli ultimi giorni.`, `Nothing about “${S.cerca.trim()}” in the last few days.`) : "")); return; }
     let giorno = null, corrente = null, fatte = 0;
@@ -1472,8 +1511,17 @@ function vistaNotizie() {
   seg.classList.add("a-misura");   // fino a 6 voci: larghe quanto il nome, così «Economia» ci sta anche sul telefono
   if (S.cerca.trim()) seg.style.opacity = 0.4;
   if (mie.length < 2) seg.hidden = true;   // una sezione sola: niente da scegliere
+  // solo le testate seguite, dentro la sezione scelta (c'è solo se ne segui almeno una)
+  const bSeguite = h("button", { type: "button", class: "filtro-seguite premibile", "aria-pressed": String(S.soloSeguite) }, L("Solo le testate che segui", "Only outlets you follow"));
+  bSeguite.hidden = !S.profilo.seguite?.length;
+  bSeguite.addEventListener("click", () => {
+    S.soloSeguite = !S.soloSeguite;
+    mem.set("soloSeguite", S.soloSeguite);
+    bSeguite.setAttribute("aria-pressed", String(S.soloSeguite));
+    riempi();
+  });
   riempi();
-  return [intestazione(L("Notizie", "News")), h("label", { class: "cerca" }, icona("lente"), input), seg, lista];
+  return [intestazione(L("Notizie", "News")), h("label", { class: "cerca" }, icona("lente"), input), seg, bSeguite, lista];
 }
 
 function vistaMercati() {
@@ -1771,9 +1819,9 @@ function foglioProfilo(parte) {
   // la lingua dell'app: cambia subito tutto, e il foglio si riapre già tradotto
   const linguaApp = segmenti([["it", "Italiano"], ["en", "English"]], lingua(), (l) => applicaLingua(l, "tu"), { etichetta: L("Lingua dell'app", "App language") });
   const aspetto = segmenti([["auto", L("Automatico", "Automatic")], ["chiaro", L("Chiaro", "Light")], ["scuro", L("Scuro", "Dark")]], sceltaAspetto(), impostaAspetto, { etichetta: L("Aspetto", "Appearance") });
-  const bInfo = h("button", { type: "button", class: "riga-link premibile" }, L("Info, fonti e privacy", "About, sources and privacy"), icona("freccia", "freccia"));
+  const bInfo = h("button", { type: "button", class: "riga-link riga-valore premibile" }, h("span", { class: "n" }, L("Info, fonti e privacy", "About, sources and privacy")), icona("freccia", "freccia"));
   bInfo.addEventListener("click", foglioInfo);
-  const bRifai = h("button", { type: "button", class: "riga-link premibile" }, L("Rivedi la presentazione", "Replay the introduction"), icona("freccia", "freccia"));
+  const bRifai = h("button", { type: "button", class: "riga-link riga-valore premibile" }, h("span", { class: "n" }, L("Rivedi la presentazione", "Replay the introduction")), icona("freccia", "freccia"));
   bRifai.addEventListener("click", () => {
     const prima = F.allaChiusura;
     F.allaChiusura = () => { prima && prima(); benvenuto(); };
@@ -1786,23 +1834,67 @@ function foglioProfilo(parte) {
     mercati: h("div", {},
       h("p", { class: "nota stretta" }, L("Accendi quelli da seguire. La stella ne mette uno in evidenza, primo e incorniciato: per esempio l'ETF del tuo piano di accumulo.", "Turn on the ones to follow. The star highlights one, first and framed: for example the ETF in your savings plan.")),
       mercati),
-    tu: h("div", {},
-      h("div", { class: "gruppo-titolo" }, "Account"),
-      (SYNC.box = h("div", { class: "riquadro-conto" }, pannelloConto())),
-      h("div", { class: "gruppo-titolo" }, L("Nome", "Name")),
-      h("div", { class: "gruppo" }, h("div", { class: "riga-tema" }, campo)),
-      h("div", { class: "gruppo-titolo" }, L("Lingua dell'app", "App language")),
-      linguaApp,
-      h("div", { class: "gruppo-titolo" }, L("Aspetto", "Appearance")),
-      aspetto,
-      h("p", { class: "nota stretta" }, L("Automatico segue il chiaro o lo scuro del dispositivo. La scelta vale solo su questo dispositivo.", "Automatic follows your device's light or dark setting. The choice applies to this device only.")),      h("div", { class: "gruppo-titolo" }, L("Notizie da", "News from")),
-      h("div", { class: "gruppo" }, PAESI().map(rigaPaese)),
-      h("p", { class: "nota stretta" }, L("Le notizie restano nella lingua della testata: quelle di Europa, Stati Uniti e Regno Unito sono in inglese.", "Stories stay in the language they were published in: the Italian ones are in Italian.")),
-      h("div", { class: "gruppo" }, bInfo, bRifai),
-      h("p", { class: "nota" }, conto.utente() ? L("Le scelte sono salvate qui e nel tuo account.", "Your choices are saved here and in your account.") : L("Senza account, queste scelte restano solo su questo dispositivo.", "Without an account, these choices stay on this device only."))),
+    tu: true,   // la disegna radiceTu ogni volta: le righe mostrano i valori di adesso
   };
   const area = h("div", {});
-  const mostraParte = (k) => { area.replaceChildren(pannelli[k]); $("#foglio-contenuto").scrollTop = 0; };
+  const mostraParte = (k) => { area.replaceChildren(k === "tu" ? radiceTu() : pannelli[k]); $("#foglio-contenuto").scrollTop = 0; };
+
+  // La scheda Tu è a livelli (scelta di Mattia, 10/11/2026): poche righe col valore di adesso, e ognuna apre la
+  // sua pagina dentro il foglio. Resta corta anche quando arrivano impostazioni nuove.
+  const paginaTu = (titolo, ...contenuto) => {
+    const indietro = h("button", { type: "button", class: "indietro-tu premibile" }, icona("indietro"), L("Tu", "You"));
+    indietro.addEventListener("click", () => mostraParte("tu"));
+    area.replaceChildren(h("div", {}, indietro, h("h3", { class: "titolo-tu" }, titolo), ...contenuto));
+    $("#foglio-contenuto").scrollTop = 0;
+  };
+  const rigaTu = (nome, valore, apri, simbolo) => {
+    const b = h("button", { type: "button", class: "riga-link riga-valore premibile" }, simbolo || null, h("span", { class: "n" }, nome), valore ? h("span", { class: "v" }, valore) : null, icona("freccia", "freccia"));
+    b.addEventListener("click", apri);
+    return b;
+  };
+  const tessera = (colore, dentro) => h("span", { class: "tessera", style: `--c:${colore}`, "aria-hidden": "true" }, dentro);
+  const pagine = {
+    account: () => paginaTu("Account",
+      (SYNC.box = h("div", { class: "riquadro-conto" }, pannelloConto())),
+      h("div", { class: "gruppo-titolo" }, L("Nome", "Name")),
+      h("div", { class: "gruppo" }, h("div", { class: "riga-tema" }, campo))),
+    paesi: () => paginaTu(L("Notizie da", "News from"),
+      h("div", { class: "gruppo" }, PAESI().map(rigaPaese)),
+      h("p", { class: "nota stretta" }, L("Le notizie restano nella lingua della testata: quelle di Europa, Stati Uniti e Regno Unito sono in inglese. Le testate che segui arrivano anche da un paese spento.", "Stories stay in the language they were published in: the Italian ones are in Italian. Outlets you follow show up even from a country that's off."))),
+    testate: () => paginaTu(L("Testate che segui", "Outlets you follow"),
+      S.profilo.seguite?.length ? h("div", { class: "gruppo" }, S.profilo.seguite.map((nome) =>
+        h("div", { class: "riga-tema" }, h("div", { class: "info" }, h("div", { class: "nome" }, nome)),
+          interruttore(L(`Segui ${nome}`, `Follow ${nome}`), true, () => { alternaSeguita(nome); segna(); })))) : null,
+      h("p", { class: "nota stretta" }, L("Per seguirne una, apri una sua notizia e tocca «Segui». Le sue notizie salgono in Per te e arrivano anche se il suo paese è spento.", "To follow one, open one of its stories and tap “Follow”. Its stories rank higher in For you and show up even if its country is off."))),
+    lingua: () => paginaTu(L("Lingua dell'app", "App language"), linguaApp),
+    aspetto: () => paginaTu(L("Aspetto", "Appearance"), aspetto,
+      h("p", { class: "nota stretta" }, L("Automatico segue il chiaro o lo scuro del dispositivo. La scelta vale solo su questo dispositivo.", "Automatic follows your device's light or dark setting. The choice applies to this device only."))),
+  };
+  function radiceTu() {
+    const u = conto.utente();
+    const nome = S.profilo.nome.trim();
+    const paesi = PAESI().filter(([k]) => paesiScelti().has(k)).map(([k, n]) => (k === "us" ? L("USA", "US") : k === "gb" ? L("UK", "UK") : n));
+    const scheda = h("button", { type: "button", class: "scheda-tu premibile" },
+      h("span", { class: "tondo", "aria-hidden": "true" }, (nome || u?.email || "").slice(0, 1).toUpperCase() || icona("radar")),
+      h("span", { class: "testi" },
+        h("span", { class: "nome" }, nome || L("Aggiungi il tuo nome", "Add your name")),
+        u ? h("span", { class: "riga" }, u.email) : null,
+        u ? h("span", { class: "riga stato", id: "stato-sync" }, testoSync()) : h("span", { class: "riga" }, L("Senza account: tocca per entrare", "No account: tap to sign in"))),
+      icona("freccia", "freccia"));
+    scheda.addEventListener("click", pagine.account);
+    return h("div", {},
+      scheda,
+      h("div", { class: "gruppo-titolo" }, L("Le tue notizie", "Your news")),
+      h("div", { class: "gruppo" },
+        rigaTu(L("Paesi", "Countries"), paesi.join(", "), pagine.paesi, tessera("var(--finanza)", icona("mondo"))),
+        rigaTu(L("Testate che segui", "Outlets you follow"), String(S.profilo.seguite?.length || 0), pagine.testate, tessera("var(--economia)", icona("giornale")))),
+      h("div", { class: "gruppo-titolo" }, "App"),
+      h("div", { class: "gruppo" },
+        rigaTu(L("Lingua", "Language"), lingua() === "it" ? "Italiano" : "English", pagine.lingua, tessera("var(--accento)", "Aa")),
+        rigaTu(L("Aspetto", "Appearance"), { auto: L("Automatico", "Automatic"), chiaro: L("Chiaro", "Light"), scuro: L("Scuro", "Dark") }[sceltaAspetto()], pagine.aspetto, tessera("var(--ai)", icona("luna")))),
+      h("div", { class: "gruppo" }, bInfo, bRifai),
+      h("p", { class: "nota" }, u ? L("Le scelte sono salvate qui e nel tuo account.", "Your choices are saved here and in your account.") : L("Senza account, queste scelte restano solo su questo dispositivo.", "Without an account, these choices stay on this device only.")));
+  }
   const iniziale = pannelli[parte] ? parte : "temi";
   const scelta = segmenti([["temi", L("Temi", "Topics")], ["mercati", L("Mercati", "Markets")], ["notifiche", L("Notifiche", "Alerts")], ["tu", L("Tu", "You")]], iniziale, mostraParte, { etichetta: L("Parte", "Section") });
   mostraParte(iniziale);
